@@ -1,3 +1,7 @@
+import 'screens/home_screen.dart';
+import 'screens/catalog_screen.dart';
+import 'screens/product_detail_screen.dart';
+import 'screens/admin_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
