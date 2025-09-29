@@ -1,15 +1,31 @@
+import 'package:pharrell_phone/models/product.dart';
 import 'screens/home_screen.dart';
 import 'screens/catalog_screen.dart';
 import 'screens/product_detail_screen.dart';
 import 'screens/admin_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
+  Route<dynamic> _errorRoute() {
+    return MaterialPageRoute(
+      builder: (_) => Scaffold(
+        appBar: AppBar(title: const Text('Erreur')),
+        body: const Center(child: Text('Page non trouvée')),
+      ),
+    );
+  }
 
   // This widget is the root of your application.
   @override
@@ -17,11 +33,25 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'E-commerce Multi-plateforme',
       initialRoute: '/',
-      routes: {
-        '/': (context) => HomeScreen(),
-        '/catalog': (context) => CatalogScreen(),
-        '/product': (context) => ProductDetailScreen(),
-        '/admin': (context) => AdminScreen(),
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(builder: (_) => const HomeScreen());
+          case '/catalog':
+            return MaterialPageRoute(builder: (_) => const CatalogScreen());
+          case '/product':
+            final args = settings.arguments;
+            if (args is Product) {
+              return MaterialPageRoute(
+                builder: (_) => ProductDetailScreen(product: args),
+              );
+            }
+            return _errorRoute();
+          case '/admin':
+            return MaterialPageRoute(builder: (_) => const AdminScreen());
+          default:
+            return _errorRoute();
+        }
       },
       theme: ThemeData(
         // This is the theme of your application.

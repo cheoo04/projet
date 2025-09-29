@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "862175497641",
+    "project_id": "first-pro-cheoo",
+    "storage_bucket": "first-pro-cheoo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:862175497641:android:a976b0bbb493ca39b808b8",
+        "android_client_info": {
+          "package_name": "com.example.pharrell_phone"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALrSxYIdYBYe9uPLCPF8bxlaEg8mnL2Kk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
