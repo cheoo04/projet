@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
   <!--
     If you are serving your web app in a path other than the root, change the
@@ -17,8 +17,9 @@
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Application mobile Pharrell Phone - Vente de smartphones et accessoires">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -31,8 +32,137 @@
 
   <title>pharrell_phone</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Preload ressources critiques -->
+  <link rel="preload" href="flutter_bootstrap.js" as="script">
+  <link rel="preload" href="main.dart.js" as="script">
+  <link rel="preload" href="styles.css" as="style">
+  
+  <!-- Polices système uniquement pour éviter les problèmes de réseau -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700&display=swap" rel="stylesheet"></noscript>  <!-- Styles CSS externes -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+  
+  <!-- Configuration Firebase -->
+  <script src="firebase-config.js"></script>
+
+  <meta name="google-signin-client_id" content="862175497641-18f06869ji7mk8dtc0ql04osqmuec6vj.apps.googleusercontent.com">
 </head>
 <body>
+  <!-- Indicateur de chargement amélioré -->
+  <div id="loading">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Chargement de l'application...</div>
+      <div id="loading-status" class="loading-status">
+        Initialisation...
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Gérer les erreurs de réseau et de ressources
+    window.addEventListener('error', function(e) {
+      if (e.message && (e.message.includes('Failed to fetch') || e.message.includes('font') || e.message.includes('canvaskit'))) {
+        console.warn('Erreur de chargement de ressource détectée:', e.message);
+        console.warn('Mode dégradé activé - utilisation des ressources locales');
+      }
+    });
+
+    // Gérer les erreurs de promesses non capturées (notamment CanvasKit)
+    window.addEventListener('unhandledrejection', function(e) {
+      if (e.reason && (e.reason.toString().includes('font') || e.reason.toString().includes('canvaskit') || e.reason.toString().includes('Failed to fetch'))) {
+        console.warn('Erreur réseau détectée:', e.reason);
+        e.preventDefault(); // Empêcher l'erreur de planter l'application
+      }
+    });
+
+    // Optimisation du timeout de chargement
+    const LOADING_TIMEOUT = 5000; // Timeout réduit à 5s
+    let loadingComplete = false;
+
+    window.addEventListener('load', function(ev) {
+      console.log('🚀 Page chargée, début initialisation Flutter');
+      const status = document.getElementById('loading-status');
+      if (status) status.textContent = 'Chargement Flutter...';
+
+      // Timeout de sécurité réduit
+      const loadingTimeout = setTimeout(function() {
+        if (!loadingComplete) {
+          const loading = document.getElementById('loading');
+          if (loading && loading.style.display !== 'none') {
+            console.warn('Masquage forcé de l\'écran de chargement après timeout réduit');
+            loading.style.display = 'none';
+            loadingComplete = true;
+          }
+        }
+      }, LOADING_TIMEOUT);
+
+      // Configuration Flutter moderne (renderer HTML pour éviter les problèmes de réseau)
+      const flutterConfig = {
+        renderer: "html",
+        hostElement: document.querySelector('flt-glass-pane') || document.body,
+      };
+
+      // Download main.dart.js avec la nouvelle API
+      _flutter.loader.load({
+        serviceWorkerSettings: {
+          serviceWorkerVersion: serviceWorkerVersion,
+        },
+      }).then(function(engineInitializer) {
+        console.log('✅ Flutter loader initialisé');
+        if (status) status.textContent = 'Initialisation du moteur...';
+        
+        // Utiliser uniquement la nouvelle méthode d'initialisation
+        return engineInitializer.initializeEngine(flutterConfig);
+      }).then(function(appRunner) {
+        console.log('✅ Moteur Flutter initialisé');
+        if (status) status.textContent = 'Lancement de l\'application...';
+        
+        // Masquer l'indicateur de chargement avant de lancer l'app
+        const loading = document.getElementById('loading');
+        if (loading) {
+          loading.style.opacity = '0';
+          loading.style.transition = 'opacity 0.3s ease-out';
+          setTimeout(() => {
+            loading.style.display = 'none';
+            loadingComplete = true;
+          }, 300);
+        }
+        
+        clearTimeout(loadingTimeout);
+        return appRunner.runApp();
+      }).then(function() {
+        console.log('✅ Application Flutter lancée');
+        loadingComplete = true;
+      }).catch(function(error) {
+        console.error('❌ Erreur lors de l\'initialisation de l\'application:', error);
+        if (status) status.textContent = 'Erreur de chargement - Redémarrage...';
+        
+        // Masquer l'écran de chargement même en cas d'erreur
+        const loading = document.getElementById('loading');
+        if (loading) {
+          loading.style.display = 'none';
+        }
+        
+        clearTimeout(loadingTimeout);
+        loadingComplete = true;
+        
+        // Tentative de redémarrage après erreur
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      });
+    });
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

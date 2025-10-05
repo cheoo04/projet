@@ -12,7 +12,20 @@
           "package_name": "com.example.pharrell_phone"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "862175497641-g1orna9etgt2trddq8ohohdomh6rpre6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pharrell_phone",
+            "certificate_hash": "e6c71362e358261bfbd469ee009200c15b7adb5b"
+          }
+        },
+        {
+          "client_id": "862175497641-18f06869ji7mk8dtc0ql04osqmuec6vj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyALrSxYIdYBYe9uPLCPF8bxlaEg8mnL2Kk"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "862175497641-18f06869ji7mk8dtc0ql04osqmuec6vj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "862175497641-rm0a9e645u6cj38vnlq507pnmealpest.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.pharrellPhone"
+              }
+            }
+          ]
         }
       }
     }

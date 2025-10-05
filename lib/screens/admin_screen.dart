@@ -1,32 +1,31 @@
 import 'package:flutter/material.dart';
+import 'admin_products_screen.dart';
+import 'admin_promotions_screen.dart';
+import 'admin_excel_screen.dart';
 
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
 
   void _manageProducts(BuildContext context) {
-    // Implémenter la gestion des produits
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Gérer les produits - Fonction à implémenter'),
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AdminProductsScreen()),
     );
   }
 
   void _managePromotions(BuildContext context) {
     // Implémenter la gestion des promotions
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Gérer les promotions - Fonction à implémenter'),
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AdminPromotionsScreen()),
     );
   }
 
   void _manageExcelOrders(BuildContext context) {
     // Implémenter l'accès à la gestion Excel des commandes
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Gestion Excel des commandes - Fonction à implémenter'),
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AdminExcelScreen()),
     );
   }
 
@@ -38,11 +37,6 @@ class AdminScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Interface d\'administration',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () => _manageProducts(context),
               child: const Text('Gérer les produits'),
