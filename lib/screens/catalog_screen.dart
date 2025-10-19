@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
-import '../services/product_service.dart';
 
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
@@ -10,103 +9,104 @@ class CatalogScreen extends StatefulWidget {
 }
 
 class _CatalogScreenState extends State<CatalogScreen> {
-  final ProductService _service = ProductService();
-  late Future<List<Product>> _futureProducts;
+  final List<Product> _allProducts = const [
+    Product(
+      id: '1',
+      name: 'iPhone 14',
+      category: 'phone',
+      brand: 'Apple',
+      price: 950.0,
+      description: 'Nouveau smartphone Apple',
+      imageUrls: [],
+      isInStock: true,
+    ),
+    Product(
+      id: '2',
+      name: 'Écran iPhone',
+      category: 'screen',
+      brand: 'Apple',
+      price: 120.0,
+      description: 'Écran de remplacement',
+      imageUrls: [],
+      isInStock: true,
+    ),
+    Product(
+      id: '3',
+      name: 'Casque Bluetooth',
+      category: 'accessory',
+      brand: 'Sony',
+      price: 85.0,
+      description: 'Casque sans fil confort',
+      imageUrls: [],
+      isInStock: false,
+    ),
+    Product(
+      id: '4',
+      name: 'PC Portable HP',
+      category: 'pc',
+      brand: 'HP',
+      price: 699.0,
+      description: 'Portable performant pour le quotidien',
+      imageUrls: [],
+      isInStock: true,
+    ),
+  ];
 
-  @override
-  void initState() {
-    super.initState();
-    _futureProducts = _service.fetchAll();
+  final List<String> _categories = const ['all', 'phone', 'accessory', 'screen', 'pc'];
+  String _selectedCategory = 'all';
+
+  List<Product> get _filtered {
+    if (_selectedCategory == 'all') return _allProducts;
+    return _allProducts.where((p) => p.category == _selectedCategory).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Catalogue')),
-      body: FutureBuilder<List<Product>>(
-        future: _futureProducts,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Erreur : ${snapshot.error}'));
-          }
-          final products = snapshot.data ?? [];
-          if (products.isEmpty) {
-            return const Center(child: Text('Aucun produit disponible'));
-          }
-          return Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: GridView.builder(
-              itemCount: products.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.7,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
+      appBar: AppBar(
+        title: const Text('Catalogue'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _selectedCategory,
+                items: _categories
+                    .map(
+                      (c) => DropdownMenuItem(
+                        value: c,
+                        child: Text(c == 'all' ? 'Toutes' : c),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedCategory = v ?? 'all'),
               ),
-              itemBuilder: (context, index) {
-                final product = products[index];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.of(
-                      context,
-                    ).pushNamed('/product', arguments: product);
-                  },
-                  child: Card(
-                    elevation: 2,
-                    color: product.isOutOfStock
-                        ? Colors.grey.shade200
-                        : Colors.white,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: product.imageUrls.isNotEmpty
-                              ? Image.network(
-                                  product.imageUrls.first,
-                                  fit: BoxFit.cover,
-                                )
-                              : const Icon(Icons.image_not_supported),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            product.name,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: product.isOutOfStock
-                                  ? Colors.grey
-                                  : Colors.black,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Text(
-                            '${product.price.toStringAsFixed(2)} FCFA',
-                            style: TextStyle(
-                              color: product.isOutOfStock
-                                  ? Colors.red
-                                  : Colors.green,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                        if (product.isOutOfStock)
-                          const Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Text(
-                              'Rupture de stock',
-                              style: TextStyle(color: Colors.red, fontSize: 12),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                );
+            ),
+          ),
+        ],
+      ),
+      body: ListView.builder(
+        itemCount: _filtered.length,
+        itemBuilder: (context, i) {
+          final p = _filtered[i];
+          final outOfStock = !p.isInStock;
+          return Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.deepPurple.withOpacity(0.1),
+                child: Text(p.name.characters.first),
+              ),
+              title: Text(p.name),
+              subtitle: Text('${p.brand} • ${p.category} • ${p.price.toStringAsFixed(2)} €'),
+              trailing: outOfStock
+                  ? const Chip(
+                      label: Text('Rupture'),
+                      backgroundColor: Color(0xFFFFE5E5),
+                      labelStyle: TextStyle(color: Colors.red),
+                    )
+                  : const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.pushNamed(context, '/product', arguments: p);
               },
             ),
           );

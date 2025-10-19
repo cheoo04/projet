@@ -15,22 +15,17 @@ class HomeScreen extends StatelessWidget {
               'Bienvenue sur l\'application e-commerce !',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/catalog');
-              },
-              child: const Text('Voir le catalogue'),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pushNamed(context, '/catalog'),
+              icon: const Icon(Icons.store),
+              label: const Text('Voir le catalogue'),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/admin');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Administration'),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.pushNamed(context, '/admin'),
+              icon: const Icon(Icons.admin_panel_settings),
+              label: const Text('Administration'),
             ),
           ],
         ),
