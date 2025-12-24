@@ -156,16 +156,18 @@ Fichiers essentiels:
   - [x] Configurer manifest.json PWA complet ✅
   - [x] Favicon et icônes PWA avec logo Pharrell Phone ✅
   - [x] Titre page personnalisé (Pharrell Phone - Boutique Smartphones) ✅
-  - [ ] Générer sitemap.xml automatiquement
-  - [ ] Tester Google Search Console
+  - [x] URLs sitemap.xml et robots.txt corrigées (first-pro-cheoo.web.app) ✅
+  - [ ] Générer sitemap.xml dynamique avec produits Firestore
+  - [ ] Soumettre sitemap à Google Search Console
 
-- [x] Phase 5: Corrections bugs web ✅ **EN COURS**
+- [x] Phase 5: Corrections bugs web ✅ **DONE**
   - [x] Corriger Image.file pour web (kIsWeb check) ✅
   - [x] Corriger Crashlytics pour web (non supporté) ✅
   - [x] Corriger routes Navigator.pushNamed → context.go/push ✅
   - [x] Corriger export Excel/PDF pour web (WebFileSaver) ✅
   - [x] Corriger bouton déconnexion admin ✅
   - [x] Corriger bouton "Voir la boutique" ✅
+  - [x] Corriger Web Share API (ShareData type conflict) ✅
   
 - [ ] Phase 6: Testing (Lighthouse > 90, Safari iOS) ⏳ **TODO**
   - [ ] Tests Lighthouse (Performance, SEO, Accessibility, Best Practices)
@@ -173,11 +175,16 @@ Fichiers essentiels:
   - [ ] Tests responsive sur devices réels
   - [ ] Load testing avec Artillery ou K6
   
-- [ ] Phase 7: Déploiement (Firebase Hosting + CI/CD) ⏳ **TODO**
-  - [ ] Configurer .github/workflows/deploy-web.yml
-  - [ ] Setup environnements staging/prod
-  - [ ] Premier déploiement staging
-  - [ ] Migration DNS vers Firebase Hosting
+- [x] Phase 7: Déploiement (Firebase Hosting + CI/CD) ✅ **DONE**
+  - [x] Configurer .github/workflows/deploy-web.yml ✅
+  - [x] Configurer firebase-hosting-merge.yml (déploiement auto sur push) ✅
+  - [x] Configurer firebase-hosting-pull-request.yml (preview sur PR) ✅
+  - [x] Secret FIREBASE_SERVICE_ACCOUNT_FIRST_PRO_CHEOO créé ✅
+  - [x] Configurer Lighthouse CI (.github/lighthouse/lighthouserc.json) ✅
+  - [x] Premier déploiement réussi 🎉 https://first-pro-cheoo.web.app
+  - [x] Ajouter domaine OAuth dans Firebase Console ✅
+  - [x] CORS Firebase Storage fonctionne ✅
+  - [ ] Configurer domaine personnalisé (optionnel)
 
 ## Key Patterns
 
