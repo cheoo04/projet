@@ -126,10 +126,19 @@ class FCMService {
     }
   }
 
+  /// Clé VAPID pour les notifications push web
+  /// À générer dans Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+  static const String _webVapidKey = 'BDnj9ilH3WCCYLsZ8_kit2mpXEjlfrNccdUg3fYNdkYkgX_oalE5xEqSK9_vQhop2Qg7vnONZMmp1Lr2eQF2IbQ';
+  
   /// Obtenir et sauvegarder le token FCM
   Future<void> _getAndSaveToken() async {
     try {
-      _fcmToken = await _messaging.getToken();
+      // Pour le web, on doit passer la clé VAPID
+      if (kIsWeb) {
+        _fcmToken = await _messaging.getToken(vapidKey: _webVapidKey);
+      } else {
+        _fcmToken = await _messaging.getToken();
+      }
       
       if (_fcmToken != null) {
         debugPrint('🔑 Token FCM: $_fcmToken');

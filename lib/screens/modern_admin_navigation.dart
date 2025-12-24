@@ -699,7 +699,7 @@ class _ModernAdminNavigationState extends State<ModernAdminNavigation> {
               Icons.science,
               Colors.teal,
               () async {
-                await Navigator.pushNamed(context, '/demo-data');
+                await context.push('/demo-data');
                 // Rafraîchir les données après retour
                 _loadStats(forceRefresh: true);
               },
