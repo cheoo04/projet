@@ -5,7 +5,7 @@ import '/models/app_user.dart';
 import '../auth/login_screen.dart';
 import '../visitor/visitor_home_screen.dart';
 import '../client/client_home_screen.dart';
-import '../admin_navigation_screen.dart';
+import '../modern_admin_navigation.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -42,7 +42,7 @@ class AuthWrapper extends StatelessWidget {
             switch (role) {
               case UserRole.admin:
               case UserRole.manager:
-                return const AdminNavigationScreen();
+                return const ModernAdminNavigation();
               case UserRole.client:
                 return const ClientHomeScreen();
               default:

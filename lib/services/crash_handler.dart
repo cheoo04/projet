@@ -12,6 +12,14 @@ class CrashHandler {
     if (_isInitialized) return;
 
     try {
+      // Crashlytics n'est pas supporté sur le web
+      if (kIsWeb) {
+        print('ℹ️ CrashHandler: Crashlytics non disponible sur web - utilisation des logs console');
+        _setupWebErrorHandling();
+        _isInitialized = true;
+        return;
+      }
+      
       // Configuration selon l'environnement
       if (kDebugMode) {
         // En debug, désactiver la collecte automatique
@@ -53,6 +61,22 @@ class CrashHandler {
     }
   }
 
+  /// Configuration du gestionnaire d'erreurs pour le web
+  static void _setupWebErrorHandling() {
+    // Capturer les erreurs Flutter
+    FlutterError.onError = (FlutterErrorDetails details) {
+      FlutterError.presentError(details);
+      print('🐛 [Web] Flutter Error: ${details.exception}');
+    };
+
+    // Capturer les erreurs async non gérées
+    PlatformDispatcher.instance.onError = (error, stack) {
+      print('🔥 [Web] Async Error: $error');
+      print('Stack: $stack');
+      return true;
+    };
+  }
+
   /// Enregistre une erreur avec contexte
   static void recordError(
     Object error,
@@ -61,6 +85,13 @@ class CrashHandler {
     bool fatal = false,
   }) {
     try {
+      // Sur le web, juste logger
+      if (kIsWeb) {
+        print('🔥 [Web] Error: $error');
+        if (context != null) print('   Context: $context');
+        return;
+      }
+      
       // Ajouter des informations contextuelles
       if (context != null) {
         FirebaseCrashlytics.instance.setCustomKey('error_context', context);
@@ -91,6 +122,10 @@ class CrashHandler {
   /// Enregistre un log personnalisé
   static void log(String message) {
     try {
+      if (kIsWeb) {
+        print('📝 [Web] Log: $message');
+        return;
+      }
       FirebaseCrashlytics.instance.log(message);
       if (kDebugMode) {
         print('📝 CrashHandler Log: $message');
@@ -105,6 +140,10 @@ class CrashHandler {
   /// Définit une clé personnalisée
   static void setCustomKey(String key, dynamic value) {
     try {
+      if (kIsWeb) {
+        print('🔑 [Web] Key: $key = $value');
+        return;
+      }
       FirebaseCrashlytics.instance.setCustomKey(key, value);
       if (kDebugMode) {
         print('🔑 CrashHandler Key: $key = $value');
@@ -119,6 +158,10 @@ class CrashHandler {
   /// Définit l'identifiant utilisateur
   static void setUserIdentifier(String identifier) {
     try {
+      if (kIsWeb) {
+        print('👤 [Web] User: $identifier');
+        return;
+      }
       FirebaseCrashlytics.instance.setUserIdentifier(identifier);
       if (kDebugMode) {
         print('👤 CrashHandler User: $identifier');

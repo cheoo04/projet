@@ -1,0 +1,19 @@
+# Pharrell Phone - robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://first-pro-cheoo.web.app/sitemap.xml
+
+# Bloquer les pages admin
+Disallow: /admin
+Disallow: /admin/*
+
+# Bloquer les assets internes
+Disallow: /flutter.js
+Disallow: /flutter_service_worker.js
+Disallow: /main.dart.js
+
+# Autoriser les ressources importantes
+Allow: /assets/
+Allow: /icons/

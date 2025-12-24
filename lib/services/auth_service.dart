@@ -9,6 +9,7 @@ import '../models/app_user.dart';
 import 'logging_service.dart';
 import 'offline_cache_service.dart';
 import 'biometric_auth_service.dart';
+import 'fcm_service.dart';
 import '../firebase_options.dart';
 
 class AuthService {
@@ -45,12 +46,12 @@ class AuthService {
     if (kIsWeb) {
       clientId =
           '862175497641-18f06869ji7mk8dtc0ql04osqmuec6vj.apps.googleusercontent.com';
-    } else if (Platform.isAndroid) {
+    } else if (!kIsWeb && Platform.isAndroid) {
       clientId =
           '862175497641-g1orna9etgt2trddq8ohohdomh6rpre6.apps.googleusercontent.com';
       serverClientId =
           '862175497641-18f06869ji7mk8dtc0ql04osqmuec6vj.apps.googleusercontent.com';
-    } else if (Platform.isIOS) {
+    } else if (!kIsWeb && Platform.isIOS) {
       clientId =
           '862175497641-rm0a9e645u6cj38vnlq507pnmealpest.apps.googleusercontent.com';
       serverClientId =
@@ -92,6 +93,8 @@ class AuthService {
       );
       _failedAttempts.remove(email);
       _lockoutTimes.remove(email);
+      // Rafraîchir le token FCM après connexion réussie
+      await FCMService().refreshToken();
       return cred;
     } catch (e) {
       _registerFailedAttempt(email);
@@ -121,55 +124,135 @@ class AuthService {
         'isActive': true,
         'profileCompleted': false,
       });
+      // Rafraîchir le token FCM pour le nouvel utilisateur
+      await FCMService().refreshToken();
     }
     return cred;
   }
 
   Future<AppUser?> signInWithGoogle() async {
+    debugPrint('🔐 signInWithGoogle() appelé - kIsWeb: $kIsWeb');
+    
     final offline = OfflineCacheService();
     if (!offline.isOnline) {
       throw Exception('Connexion Internet requise');
     }
-    await _ensureGoogleSignInInitialized();
-    if (!_googleSignIn.supportsAuthenticate()) {
-      throw Exception('Google Sign-In non supporté');
-    }
-    final googleUser = await _googleSignIn.authenticate();
-    _currentGoogleUser = googleUser;
-    final googleAuth = googleUser.authentication;
-    if (googleAuth.idToken == null) {
-      throw Exception('ID token manquant');
-    }
-    final credential = GoogleAuthProvider.credential(
-      idToken: googleAuth.idToken,
-      accessToken: null,
-    );
-    final uc = await _auth.signInWithCredential(credential);
-    final fu = uc.user!;
-    final existing = await _getUserData(fu.uid);
-    if (existing == null) {
-      final parts = googleUser.displayName?.split(' ') ?? ['', ''];
-      final newUser = AppUser(
-        id: fu.uid,
-        email: fu.email ?? '',
-        firstName: parts.first,
-        lastName: parts.length > 1 ? parts.sublist(1).join(' ') : '',
-        role: UserRole.client,
-        createdAt: DateTime.now(),
-      );
-      await _firestore.collection('users').doc(fu.uid).set(newUser.toMap());
-      return newUser;
-    } else {
-      await _firestore.collection('users').doc(fu.uid).update({
-        'lastLoginAt': DateTime.now().toIso8601String(),
-        'authProvider': 'google',
-      });
-      return existing;
+    
+    try {
+      UserCredential userCredential;
+      String? googleDisplayName;
+      String? googleEmail;
+      
+      if (kIsWeb) {
+        debugPrint('🌐 Web détecté - utilisation de signInWithPopup');
+        // Sur le web, utiliser signInWithPopup directement
+        final googleProvider = GoogleAuthProvider();
+        googleProvider.addScope('email');
+        googleProvider.addScope('profile');
+        
+        userCredential = await _auth.signInWithPopup(googleProvider);
+        debugPrint('✅ signInWithPopup réussi');
+        // Sur le web, on récupère les infos depuis le userCredential
+        googleDisplayName = userCredential.user?.displayName;
+        googleEmail = userCredential.user?.email;
+      } else {
+        // Sur mobile, utiliser Google Sign-In natif
+        await _ensureGoogleSignInInitialized();
+        if (!_googleSignIn.supportsAuthenticate()) {
+          throw Exception('Google Sign-In non supporté sur cet appareil');
+        }
+        
+        // Authentification Google
+        final googleUser = await _googleSignIn.authenticate();
+        _currentGoogleUser = googleUser;
+        googleDisplayName = googleUser.displayName;
+        googleEmail = googleUser.email;
+        
+        // Récupérer le token d'authentification
+        final googleAuth = googleUser.authentication;
+        final String? idToken = googleAuth.idToken;
+        
+        if (idToken == null || idToken.isEmpty) {
+          throw Exception('Token d\'authentification manquant');
+        }
+        
+        // Créer les credentials Firebase
+        final credential = GoogleAuthProvider.credential(
+          idToken: idToken,
+          accessToken: null,
+        );
+        
+        userCredential = await _auth.signInWithCredential(credential);
+      }
+      
+      final firebaseUser = userCredential.user;
+      
+      if (firebaseUser == null) {
+        throw Exception('Échec de la connexion');
+      }
+      
+      // Récupérer ou créer le profil utilisateur dans Firestore
+      final existingUser = await _getUserData(firebaseUser.uid);
+      
+      if (existingUser != null) {
+        // Utilisateur existant - mettre à jour la dernière connexion
+        await _firestore.collection('users').doc(firebaseUser.uid).update({
+          'lastLoginAt': DateTime.now().toIso8601String(),
+          'authProvider': 'google',
+        });
+        // Rafraîchir le token FCM
+        await FCMService().refreshToken();
+        return existingUser;
+      } else {
+        // Nouvel utilisateur - créer le profil
+        final String displayName = googleDisplayName ?? firebaseUser.displayName ?? '';
+        final String email = firebaseUser.email ?? googleEmail ?? '';
+        
+        final List<String> nameParts = displayName.isNotEmpty 
+            ? displayName.split(' ') 
+            : <String>[];
+        final String firstName = nameParts.isNotEmpty 
+            ? nameParts.first 
+            : (email.isNotEmpty ? email.split('@').first : 'Utilisateur');
+        final String lastName = nameParts.length > 1 
+            ? nameParts.sublist(1).join(' ') 
+            : '';
+        
+        final newUser = AppUser(
+          id: firebaseUser.uid,
+          email: email,
+          firstName: firstName,
+          lastName: lastName,
+          role: UserRole.client,
+          createdAt: DateTime.now(),
+        );
+        
+        await _firestore.collection('users').doc(firebaseUser.uid).set(newUser.toFirestore());
+        // Rafraîchir le token FCM pour le nouvel utilisateur
+        await FCMService().refreshToken();
+        return newUser;
+      }
+    } catch (e) {
+      // Si l'erreur contient "null" et "String", c'est probablement un problème de token
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('null') && errorStr.contains('string')) {
+        // Vérifier si l'utilisateur est quand même connecté à Firebase
+        final currentUser = _auth.currentUser;
+        if (currentUser != null) {
+          final userData = await _getUserData(currentUser.uid);
+          if (userData != null) {
+            return userData;
+          }
+        }
+      }
+      rethrow;
     }
   }
 
   Future<void> signOutGoogle() async {
     await _ensureGoogleSignInInitialized();
+    // Supprimer le token FCM avant la déconnexion
+    await FCMService().removeToken();
     await _googleSignIn.signOut();
     _currentGoogleUser = null;
     await _auth.signOut();
@@ -187,6 +270,8 @@ class AuthService {
   }
 
   Future<void> signOut() async {
+    // Supprimer le token FCM avant la déconnexion
+    await FCMService().removeToken();
     await _auth.signOut();
   }
 
@@ -200,14 +285,28 @@ class AuthService {
     String? phone,
     String? address,
   }) async {
-    final u = currentUser!;
-    final data = <String, dynamic>{};
+    final u = currentUser;
+    if (u == null) {
+      throw Exception('Utilisateur non connecté');
+    }
+    
+    final data = <String, dynamic>{
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    
+    // Toujours mettre à jour firstName et lastName s'ils sont fournis (même vides)
     if (firstName != null) data['firstName'] = firstName;
     if (lastName != null) data['lastName'] = lastName;
     if (phone != null) data['phone'] = phone;
     if (address != null) data['address'] = address;
-    data['updatedAt'] = FieldValue.serverTimestamp();
+    
+    debugPrint('=== updateUserProfile ===');
+    debugPrint('uid: ${u.uid}');
+    debugPrint('data: $data');
+    
     await _firestore.collection('users').doc(u.uid).update(data);
+    
+    debugPrint('Mise à jour réussie');
   }
 
   Future<UserRole> getCurrentUserRole() async {
@@ -334,22 +433,43 @@ class AuthService {
     if (e is FirebaseAuthException) {
       switch (e.code) {
         case 'user-not-found':
-          return 'Aucun utilisateur trouvé';
+          return 'Aucun utilisateur trouvé avec cet email';
         case 'wrong-password':
           return 'Mot de passe incorrect';
-        case 'email-already-in-use':
-          return 'Email déjà utilisé';
-        case 'weak-password':
-          return 'Mot de passe trop faible';
+        case 'invalid-credential':
+          return 'Email ou mot de passe incorrect';
         case 'invalid-email':
           return 'Email invalide';
+        case 'email-already-in-use':
+          return 'Cet email est déjà utilisé';
+        case 'weak-password':
+          return 'Mot de passe trop faible (min. 6 caractères)';
         case 'operation-not-allowed':
           return 'Opération non autorisée';
         case 'too-many-requests':
-          return 'Trop de tentatives';
+          return 'Trop de tentatives. Réessayez plus tard.';
+        case 'user-disabled':
+          return 'Ce compte a été désactivé';
+        case 'network-request-failed':
+          return 'Erreur réseau. Vérifiez votre connexion.';
+        default:
+          debugPrint('⚠️ Firebase Auth Error: ${e.code} - ${e.message}');
+          return 'Email ou mot de passe incorrect';
       }
     }
-    return 'Erreur inattendue';
+    // Gérer les exceptions standard
+    final errorStr = e.toString().toLowerCase();
+    if (errorStr.contains('wrong-password') || errorStr.contains('invalid-credential')) {
+      return 'Email ou mot de passe incorrect';
+    }
+    if (errorStr.contains('user-not-found')) {
+      return 'Aucun compte avec cet email';
+    }
+    if (errorStr.contains('network')) {
+      return 'Erreur réseau. Vérifiez votre connexion.';
+    }
+    debugPrint('⚠️ Auth error: $e');
+    return 'Email ou mot de passe incorrect';
   }
 
   UserRole _parseRole(String? s) {
@@ -371,6 +491,336 @@ class AuthService {
     if (u?.email != null) {
       await oc.saveSetting('cached_password_${u!.email}', null);
       await oc.saveSetting('cached_user_${u.email}', null);
+    }
+  }
+
+  // ============================================
+  // AUTHENTIFICATION PAR TÉLÉPHONE (SMS)
+  // ============================================
+
+  /// Envoyer un code SMS au numéro de téléphone
+  Future<void> verifyPhoneNumber({
+    required String phoneNumber,
+    required Function(String verificationId, int? resendToken) onCodeSent,
+    required Function(PhoneAuthCredential credential) onVerificationCompleted,
+    required Function(String errorMessage) onVerificationFailed,
+    required Function(String verificationId) onCodeAutoRetrievalTimeout,
+    int? resendToken,
+  }) async {
+    try {
+      await _auth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        timeout: const Duration(seconds: 60),
+        forceResendingToken: resendToken,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          // Auto-vérification sur Android
+          onVerificationCompleted(credential);
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          onVerificationFailed(_handleAuthException(e));
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          onCodeSent(verificationId, resendToken);
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          onCodeAutoRetrievalTimeout(verificationId);
+        },
+      );
+    } catch (e) {
+      debugPrint('Erreur verification téléphone: $e');
+      rethrow;
+    }
+  }
+
+  /// Vérifier le code SMS et se connecter
+  Future<UserCredential> signInWithSmsCode({
+    required String verificationId,
+    required String smsCode,
+    String? firstName,
+    String? lastName,
+  }) async {
+    try {
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+
+      // Créer le profil utilisateur si nouveau
+      if (userCredential.additionalUserInfo?.isNewUser ?? false) {
+        await _createUserProfileFromPhone(
+          uid: userCredential.user!.uid,
+          phone: userCredential.user!.phoneNumber,
+          firstName: firstName,
+          lastName: lastName,
+        );
+      }
+
+      return userCredential;
+    } catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
+  /// Se connecter avec les credentials téléphone (auto-verification Android)
+  Future<UserCredential> signInWithPhoneCredential({
+    required PhoneAuthCredential credential,
+  }) async {
+    try {
+      return await _auth.signInWithCredential(credential);
+    } catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
+  /// Créer le profil utilisateur depuis l'auth téléphone
+  Future<void> _createUserProfileFromPhone({
+    required String uid,
+    String? phone,
+    String? firstName,
+    String? lastName,
+  }) async {
+    await _firestore.collection('users').doc(uid).set({
+      'phone': phone ?? '',
+      'firstName': firstName ?? '',
+      'lastName': lastName ?? '',
+      'role': 'client',
+      'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  // ============================================
+  // AUTHENTIFICATION ANONYME
+  // ============================================
+
+  /// Connexion anonyme
+  Future<UserCredential> signInAnonymously() async {
+    try {
+      final credential = await _auth.signInAnonymously();
+
+      // Créer un profil minimal
+      if (credential.user != null) {
+        await _firestore.collection('users').doc(credential.user!.uid).set({
+          'role': 'visitor',
+          'isAnonymous': true,
+          'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      return credential;
+    } catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
+  /// Convertir un compte anonyme en compte permanent avec email
+  Future<UserCredential> linkAnonymousWithEmail({
+    required String email,
+    required String password,
+    String? firstName,
+    String? lastName,
+  }) async {
+    try {
+      final credential = EmailAuthProvider.credential(
+        email: email,
+        password: password,
+      );
+
+      final result = await currentUser!.linkWithCredential(credential);
+      
+      // Mettre à jour le profil
+      await _firestore.collection('users').doc(currentUser!.uid).update({
+        'email': email,
+        'firstName': firstName ?? '',
+        'lastName': lastName ?? '',
+        'role': 'client',
+        'isAnonymous': false,
+      });
+
+      return result;
+    } catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
+  /// Convertir un compte anonyme avec Google
+  Future<UserCredential?> linkAnonymousWithGoogle() async {
+    try {
+      await _ensureGoogleSignInInitialized();
+      
+      if (!_googleSignIn.supportsAuthenticate()) {
+        throw Exception('Google Sign-In non supporté');
+      }
+      
+      final googleUser = await _googleSignIn.authenticate();
+      final googleAuth = googleUser.authentication;
+      
+      if (googleAuth.idToken == null) {
+        throw Exception('ID token manquant');
+      }
+      
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+        accessToken: null,
+      );
+
+      final result = await currentUser!.linkWithCredential(credential);
+      
+      // Mettre à jour le profil
+      await _firestore.collection('users').doc(currentUser!.uid).update({
+        'email': googleUser.email,
+        'firstName': googleUser.displayName?.split(' ').first ?? '',
+        'lastName': googleUser.displayName?.split(' ').skip(1).join(' ') ?? '',
+        'photoUrl': googleUser.photoUrl,
+        'role': 'client',
+        'isAnonymous': false,
+      });
+
+      return result;
+    } catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
+  /// Convertir un compte anonyme avec téléphone
+  Future<UserCredential> linkAnonymousWithPhone({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    try {
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+
+      final result = await currentUser!.linkWithCredential(credential);
+      
+      // Mettre à jour le profil
+      await _firestore.collection('users').doc(currentUser!.uid).update({
+        'phone': currentUser!.phoneNumber,
+        'role': 'client',
+        'isAnonymous': false,
+      });
+
+      return result;
+    } catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
+  // ============================================
+  // RÉINITIALISATION MOT DE PASSE
+  // ============================================
+
+  /// Envoyer un email de réinitialisation de mot de passe
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
+  /// Envoyer un lien de connexion par email (passwordless)
+  Future<void> sendSignInLinkToEmail({
+    required String email,
+    required String redirectUrl,
+  }) async {
+    try {
+      final actionCodeSettings = ActionCodeSettings(
+        url: redirectUrl,
+        handleCodeInApp: true,
+        androidPackageName: 'com.example.pharrell_phone',
+        androidInstallApp: true,
+        androidMinimumVersion: '23',
+        iOSBundleId: 'com.example.pharrellPhone',
+      );
+
+      await _auth.sendSignInLinkToEmail(
+        email: email,
+        actionCodeSettings: actionCodeSettings,
+      );
+    } catch (e) {
+      throw _handleAuthException(e);
+    }
+  }
+
+  /// Connexion admin avec vérification du rôle
+  /// Retourne l'AppUser si c'est un admin/manager, sinon lance une exception
+  Future<AppUser> signInAsAdmin(String email, String password) async {
+    try {
+      // 1. Connexion Firebase Auth
+      final cred = await signInWithEmailAndPassword(email, password);
+      if (cred?.user == null) {
+        throw Exception('Échec de la connexion');
+      }
+
+      // 2. Récupérer les données utilisateur depuis Firestore
+      final doc = await _firestore.collection('users').doc(cred!.user!.uid).get();
+      
+      if (!doc.exists) {
+        await _auth.signOut();
+        throw Exception('Compte utilisateur non trouvé');
+      }
+
+      final userData = doc.data()!;
+      final roleStr = userData['role'] as String? ?? 'client';
+      final role = _parseRole(roleStr);
+
+      // 3. Vérifier si c'est un admin ou manager
+      if (!role.canAccessAdmin) {
+        await _auth.signOut();
+        throw Exception('Accès refusé. Vous n\'êtes pas administrateur.');
+      }
+
+      // 4. Mettre à jour la dernière connexion
+      await _firestore.collection('users').doc(cred.user!.uid).update({
+        'lastLoginAt': FieldValue.serverTimestamp(),
+      });
+
+      // 5. Retourner l'AppUser
+      return AppUser.fromFirestore(doc);
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw _handleAuthException(e);
+    }
+  }
+
+  /// Créer un compte admin (à utiliser une seule fois pour setup initial)
+  Future<void> createAdminAccount({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+  }) async {
+    try {
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      if (cred.user != null) {
+        await _firestore.collection('users').doc(cred.user!.uid).set({
+          'uid': cred.user!.uid,
+          'email': email,
+          'firstName': firstName,
+          'lastName': lastName,
+          'role': 'admin',
+          'createdAt': FieldValue.serverTimestamp(),
+          'isActive': true,
+          'profileCompleted': true,
+          'permissions': {
+            'manageProducts': true,
+            'manageOrders': true,
+            'manageUsers': true,
+            'manageStock': true,
+            'viewAnalytics': true,
+          },
+        });
+      }
+    } catch (e) {
+      throw _handleAuthException(e);
     }
   }
 }

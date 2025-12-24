@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/order.dart';
 import 'package:intl/intl.dart';
+import 'web_file_saver.dart';
 
 class InvoiceService {
   static const String _companyName = 'Pharrell Phone';
@@ -65,13 +67,20 @@ Pays''';
   /// Sauvegarde la facture et retourne le chemin du fichier
   Future<String> saveInvoice(Order order) async {
     final pdfBytes = await generateInvoicePdf(order);
-    final directory = await getApplicationDocumentsDirectory();
     final fileName =
         'facture_${order.id}_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
-    final file = File('${directory.path}/$fileName');
-
-    await file.writeAsBytes(pdfBytes);
-    return file.path;
+    
+    if (kIsWeb) {
+      // Sur le web, télécharger directement
+      await WebFileSaver.saveFile(pdfBytes, fileName, 'application/pdf');
+      return fileName;
+    } else {
+      // Sur mobile, sauvegarder dans le répertoire de l'app
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/$fileName');
+      await file.writeAsBytes(pdfBytes);
+      return file.path;
+    }
   }
 
   /// Affiche le dialog de prévisualisation et d'impression

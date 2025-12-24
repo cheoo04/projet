@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../models/product.dart';
+import '../models/category.dart' as models;
 import '../services/product_service.dart';
+import '../services/category_service.dart';
+import '../services/cloudinary_service.dart';
 import 'package:intl/intl.dart';
 
 class ProductFormScreen extends StatefulWidget {
@@ -15,20 +20,14 @@ class ProductFormScreen extends StatefulWidget {
 class _ProductFormScreenState extends State<ProductFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final ProductService _service = ProductService();
+  final CategoryService _categoryService = CategoryService();
+  final CloudinaryService _cloudinaryService = CloudinaryService();
   final ImagePicker _picker = ImagePicker();
+  bool _isUploadingImage = false;
 
-  // Catégories prédéfinies
-  static const List<String> _predefinedCategories = [
-    'phone',
-    'accessory',
-    'screen',
-    'pc',
-    'tablet',
-    'headphones',
-    'charger',
-    'case',
-    'other',
-  ];
+  // Catégories chargées depuis Firebase
+  List<models.Category> _categories = [];
+  bool _isLoadingCategories = true;
 
   late TextEditingController _nameC;
   late TextEditingController _brandC;
@@ -45,6 +44,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   @override
   void initState() {
     super.initState();
+    _loadCategories();
+    
     final p = widget.product;
     _nameC = TextEditingController(text: p?.name ?? '');
     _brandC = TextEditingController(text: p?.brand ?? '');
@@ -54,12 +55,41 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     _descriptionC = TextEditingController(text: p?.description ?? '');
     _imageUrlC = TextEditingController();
     _imageUrls.addAll(p?.imageUrls ?? []);
+    
+    // Garder la catégorie existante du produit
     _selectedCategory = p?.category;
     _createdAt = p?.createdAt ?? DateTime.now();
 
     (p?.specs ?? {}).forEach((k, v) {
       _specControllers[k] = TextEditingController(text: v);
     });
+  }
+  
+  /// Charge les catégories depuis Firebase
+  Future<void> _loadCategories() async {
+    try {
+      final cats = await _categoryService.getCategories();
+      if (mounted) {
+        setState(() {
+          _categories = cats;
+          _isLoadingCategories = false;
+          
+          // Vérifier si la catégorie sélectionnée existe dans la liste
+          if (_selectedCategory != null) {
+            final exists = _categories.any((c) => c.id == _selectedCategory || c.name == _selectedCategory);
+            if (!exists) {
+              _selectedCategory = null;
+            }
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingCategories = false;
+        });
+      }
+    }
   }
 
   @override
@@ -120,7 +150,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         await _service.update(prod);
       }
       if (mounted) {
-        Navigator.pop(context, true);
+        _showSuccessDialog(prod.id, widget.product == null);
       }
     } catch (e) {
       if (mounted) {
@@ -129,6 +159,57 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
       }
     }
+  }
+
+  /// Affiche un dialogue de succès avec option de voir le produit sur la boutique
+  void _showSuccessDialog(String productId, bool isNew) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        icon: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.green.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.check_circle,
+            color: Colors.green,
+            size: 48,
+          ),
+        ),
+        title: Text(isNew ? 'Produit ajouté !' : 'Produit modifié !'),
+        content: Text(
+          isNew 
+            ? 'Le produit a été ajouté avec succès à votre catalogue.'
+            : 'Les modifications ont été enregistrées.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Fermer le dialogue
+              Navigator.pop(this.context, true); // Retourner à la liste
+            },
+            child: const Text('Retour à la liste'),
+          ),
+          FilledButton.icon(
+            onPressed: () {
+              Navigator.pop(context); // Fermer le dialogue
+              Navigator.pop(this.context, true); // Retourner à la liste
+              // Naviguer vers la boutique avec le produit
+              Navigator.pushNamed(
+                this.context, 
+                '/product-detail',
+                arguments: productId,
+              );
+            },
+            icon: const Icon(Icons.storefront),
+            label: const Text('Voir sur la boutique'),
+          ),
+        ],
+      ),
+    );
   }
 
   // Validation d'URL d'image
@@ -145,7 +226,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             url.toLowerCase().endsWith('.webp'));
   }
 
-  // Sélecteur d'images
+  // Sélecteur d'images avec upload Cloudinary
   Future<void> _pickImage() async {
     final source = await showDialog<ImageSource>(
       context: context,
@@ -154,11 +235,12 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Caméra'),
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
+            if (!kIsWeb) // Caméra non disponible sur web
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Caméra'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
             ListTile(
               leading: const Icon(Icons.photo_library),
               title: const Text('Galerie'),
@@ -171,16 +253,15 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
     if (source != null) {
       try {
-        final XFile? image = await _picker.pickImage(source: source);
+        final XFile? image = await _picker.pickImage(
+          source: source,
+          maxWidth: 1200,
+          maxHeight: 1200,
+          imageQuality: 85,
+        );
+        
         if (image != null) {
-          setState(() {
-            _imageUrls.add(image.path);
-          });
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Image ajoutée avec succès')),
-            );
-          }
+          await _uploadImageToCloudinary(image);
         }
       } catch (e) {
         if (mounted) {
@@ -188,6 +269,60 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
             SnackBar(content: Text('Erreur lors de la sélection: $e')),
           );
         }
+      }
+    }
+  }
+
+  /// Upload l'image sélectionnée vers Cloudinary
+  Future<void> _uploadImageToCloudinary(XFile image) async {
+    setState(() => _isUploadingImage = true);
+    
+    try {
+      // Lire les bytes de l'image
+      final bytes = await image.readAsBytes();
+      
+      // Générer un ID unique pour l'image
+      final productName = _nameC.text.trim().isNotEmpty 
+          ? _nameC.text.trim().replaceAll(' ', '_').toLowerCase()
+          : 'product';
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final publicId = '${productName}_$timestamp';
+      
+      // Upload vers Cloudinary
+      final url = await _cloudinaryService.uploadImageUnsigned(
+        bytes,
+        folder: 'products',
+        publicId: publicId,
+      );
+      
+      if (url != null) {
+        setState(() {
+          _imageUrls.add(url);
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Image uploadée avec succès !'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception('URL de retour nulle');
+      }
+    } catch (e) {
+      debugPrint('❌ Erreur upload Cloudinary: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur upload: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUploadingImage = false);
       }
     }
   }
@@ -294,28 +429,30 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                               v == null || v.isEmpty ? 'Marque requise' : null,
                         ),
                         const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedCategory,
-                          decoration: const InputDecoration(
-                            labelText: 'Catégorie *',
-                            prefixIcon: Icon(Icons.category),
-                            helperText: 'Sélectionnez une catégorie',
-                          ),
-                          items: _predefinedCategories.map((category) {
-                            return DropdownMenuItem(
-                              value: category,
-                              child: Text(category.toUpperCase()),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedCategory = value;
-                            });
-                          },
-                          validator: (v) => v == null || v.isEmpty
-                              ? 'Catégorie requise'
-                              : null,
-                        ),
+                        _isLoadingCategories
+                          ? const Center(child: CircularProgressIndicator())
+                          : DropdownButtonFormField<String>(
+                              value: _selectedCategory,
+                              decoration: const InputDecoration(
+                                labelText: 'Catégorie *',
+                                prefixIcon: Icon(Icons.category),
+                                helperText: 'Sélectionnez une catégorie',
+                              ),
+                              items: _categories.map((category) {
+                                return DropdownMenuItem(
+                                  value: category.id,
+                                  child: Text(category.name),
+                                );
+                              }).toList(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedCategory = value;
+                                });
+                              },
+                              validator: (v) => v == null || v.isEmpty
+                                  ? 'Catégorie requise'
+                                  : null,
+                            ),
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _descriptionC,
@@ -460,13 +597,27 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                               icon: const Icon(Icons.add),
                               tooltip: 'Ajouter URL',
                             ),
-                            IconButton(
-                              onPressed: _pickImage,
-                              icon: const Icon(Icons.camera_alt),
-                              tooltip: 'Prendre photo',
-                            ),
+                            _isUploadingImage
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : IconButton(
+                                    onPressed: _pickImage,
+                                    icon: const Icon(Icons.upload_file),
+                                    tooltip: 'Uploader depuis l\'appareil',
+                                  ),
                           ],
                         ),
+                        if (_isUploadingImage)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8),
+                            child: Text(
+                              'Upload en cours vers Cloudinary...',
+                              style: TextStyle(color: Colors.blue, fontSize: 12),
+                            ),
+                          ),
                         if (_imageUrls.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           Text('Images ajoutées (${_imageUrls.length}):'),
@@ -513,13 +664,17 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'Spécifications techniques',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                            Expanded(
+                              child: Text(
+                                'Spécifications techniques',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: 8),
                             ElevatedButton.icon(
                               onPressed: _addNewSpec,
                               icon: const Icon(Icons.add, size: 16),

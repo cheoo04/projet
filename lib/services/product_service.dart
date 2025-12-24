@@ -46,6 +46,50 @@ class ProductService {
         );
   }
 
+  /// Obtenir les produits avec pagination (optimisé pour performances)
+  Stream<List<Product>> getProductsPaginated({
+    int limit = 20,
+    DocumentSnapshot? lastDocument,
+  }) {
+    Query query = _col.orderBy('createdAt', descending: true).limit(limit);
+
+    if (lastDocument != null) {
+      query = query.startAfterDocument(lastDocument);
+    }
+
+    return query.snapshots().map(
+          (snapshot) => snapshot.docs
+              .map(
+                (doc) =>
+                    Product.fromMap(doc.data() as Map<String, dynamic>, doc.id),
+              )
+              .toList(),
+        );
+  }
+
+  /// Obtenir les produits par catégorie avec pagination
+  Future<List<Product>> getProductsByCategory({
+    required String category,
+    int limit = 20,
+    DocumentSnapshot? lastDocument,
+  }) async {
+    Query query = _col
+        .where('category', isEqualTo: category)
+        .orderBy('createdAt', descending: true)
+        .limit(limit);
+
+    if (lastDocument != null) {
+      query = query.startAfterDocument(lastDocument);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs
+        .map(
+          (doc) => Product.fromMap(doc.data() as Map<String, dynamic>, doc.id),
+        )
+        .toList();
+  }
+
   /// Obtenir les produits avec stock faible
   Future<List<Product>> getLowStockProducts({
     int threshold = defaultLowStockThreshold,
@@ -151,14 +195,48 @@ class ProductService {
         debugPrint(
           'ALERTE STOCK FAIBLE: ${product.name} - ${product.stock} unités restantes',
         );
-        // TODO: Implémenter l'envoi de notifications via NotificationService
+        // Envoi de notification aux admins
+        await _sendStockAlert(
+          'Stock faible',
+          '⚠️ Stock faible pour ${product.name}: ${product.stock} unités restantes',
+          'low_stock',
+        );
       } else if (product.stock == 0) {
         debugPrint('ALERTE RUPTURE STOCK: ${product.name} - Stock épuisé');
-        // TODO: Implémenter l'envoi de notifications via NotificationService
+        // Envoi de notification aux admins
+        await _sendStockAlert(
+          'Rupture de stock',
+          '🚨 Rupture de stock pour ${product.name}',
+          'out_of_stock',
+        );
       }
     } catch (e) {
       // Log error but don't throw to avoid breaking main operations
       debugPrint('Erreur envoi alerte stock: $e');
+    }
+  }
+
+  /// Envoie une alerte de stock aux administrateurs
+  Future<void> _sendStockAlert(
+    String title,
+    String message,
+    String type,
+  ) async {
+    try {
+      // Créer une notification dans Firestore
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'title': title,
+        'message': message,
+        'type': type,
+        'priority': type == 'out_of_stock' ? 'high' : 'medium',
+        'isRead': false,
+        'createdAt': FieldValue.serverTimestamp(),
+        'targetRole': 'admin', // Notification pour les admins uniquement
+      });
+      
+      debugPrint('Notification de stock envoyée: $title');
+    } catch (e) {
+      debugPrint('Erreur création notification: $e');
     }
   }
 

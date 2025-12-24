@@ -7,6 +7,8 @@ enum StockMovementType {
   sale, // Vente
   return_, // Retour
   damaged, // Produit endommagé
+  increase, // Alias pour entry (augmentation)
+  decrease, // Alias pour exit (diminution)
 }
 
 class StockMovement {
@@ -23,6 +25,7 @@ class StockMovement {
   final String userId; // Utilisateur qui a effectué le mouvement
   final String userName;
   final DateTime createdAt;
+  final DateTime date; // Alias pour createdAt
   final Map<String, dynamic> metadata; // Données supplémentaires
 
   StockMovement({
@@ -38,9 +41,11 @@ class StockMovement {
     this.supplierId,
     required this.userId,
     required this.userName,
-    required this.createdAt,
+    DateTime? createdAt,
+    DateTime? date,
     this.metadata = const {},
-  });
+  }) : createdAt = createdAt ?? date ?? DateTime.now(),
+       date = date ?? createdAt ?? DateTime.now();
 
   // Getters utiles
   bool get isEntry => quantity > 0;
@@ -50,8 +55,10 @@ class StockMovement {
   String get typeDisplayName {
     switch (type) {
       case StockMovementType.entry:
+      case StockMovementType.increase:
         return 'Entrée de stock';
       case StockMovementType.exit:
+      case StockMovementType.decrease:
         return 'Sortie de stock';
       case StockMovementType.adjustment:
         return 'Ajustement';

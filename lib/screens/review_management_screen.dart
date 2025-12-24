@@ -140,53 +140,48 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
 
           const SizedBox(height: 12),
 
-          // Filtres
-          Row(
+          // Filtre par statut
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Filtre par statut
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              const Text(
+                'Statut:',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 4),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
                   children: [
-                    const Text(
-                      'Statut:',
-                      style: TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildStatusFilter(null, 'Tous'),
-                          _buildStatusFilter('pending', 'En attente'),
-                          _buildStatusFilter('approved', 'Approuvé'),
-                          _buildStatusFilter('rejected', 'Rejeté'),
-                        ],
-                      ),
-                    ),
+                    _buildStatusFilter(null, 'Tous'),
+                    _buildStatusFilter('pending', 'En attente'),
+                    _buildStatusFilter('approved', 'Approuvé'),
+                    _buildStatusFilter('rejected', 'Rejeté'),
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
-              // Filtre par note
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ],
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Filtre par note
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Note:',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 4),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
                   children: [
-                    const Text(
-                      'Note:',
-                      style: TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _buildRatingFilter(null, 'Toutes'),
-                          ...List.generate(
-                            5,
-                            (i) => _buildRatingFilter(i + 1, '${i + 1}⭐'),
-                          ),
-                        ],
-                      ),
+                    _buildRatingFilter(null, 'Toutes'),
+                    ...List.generate(
+                      5,
+                      (i) => _buildRatingFilter(i + 1, '${i + 1}⭐'),
                     ),
                   ],
                 ),
@@ -203,7 +198,13 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
-        label: Text(label),
+        label: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Theme.of(context).primaryColor : Colors.black87,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
         selected: isSelected,
         onSelected: (selected) {
           setState(() {
@@ -211,8 +212,11 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
           });
         },
         backgroundColor: Colors.white,
-        selectedColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+        selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
         checkmarkColor: Theme.of(context).primaryColor,
+        side: BorderSide(
+          color: isSelected ? Theme.of(context).primaryColor : Colors.grey.shade300,
+        ),
       ),
     );
   }
@@ -222,7 +226,13 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
-        label: Text(label),
+        label: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Theme.of(context).primaryColor : Colors.black87,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
         selected: isSelected,
         onSelected: (selected) {
           setState(() {
@@ -230,8 +240,11 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
           });
         },
         backgroundColor: Colors.white,
-        selectedColor: Theme.of(context).primaryColor.withValues(alpha: 0.2),
+        selectedColor: Theme.of(context).primaryColor.withOpacity(0.2),
         checkmarkColor: Theme.of(context).primaryColor,
+        side: BorderSide(
+          color: isSelected ? Theme.of(context).primaryColor : Colors.grey.shade300,
+        ),
       ),
     );
   }
@@ -288,11 +301,15 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            review.userName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                          Flexible(
+                            child: Text(
+                              review.userName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                           ),
                           if (review.isVerifiedPurchase) ...[
@@ -307,7 +324,7 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Text(
-                                'Achat vérifié',
+                                'Vérifié',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
@@ -318,8 +335,29 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
                         ],
                       ),
                       Text(
-                        'Produit ID: ${review.productId}',
+                        'Produit: ${review.productId}',
                         style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
+                      // Nom du produit
+                      FutureBuilder<DocumentSnapshot>(
+                        future: _firestore.collection('products').doc(review.productId).get(),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasData && snapshot.data!.exists) {
+                            final productData = snapshot.data!.data() as Map<String, dynamic>;
+                            final productName = productData['name'] ?? 'Produit inconnu';
+                            return Text(
+                              productName,
+                              style: TextStyle(
+                                color: Colors.grey[800],
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
                       ),
                     ],
                   ),
@@ -417,60 +455,78 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
             ],
 
             // Statut et actions
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 _buildStatusChip(status),
-                const Spacer(),
                 if (status == 'pending') ...[
-                  ElevatedButton.icon(
-                    onPressed: () => _showModerationDialog(review, true),
-                    icon: const Icon(Icons.check, size: 16),
-                    label: const Text('Approuver'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(0, 32),
+                  SizedBox(
+                    height: 32,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showModerationDialog(review, true),
+                      icon: const Icon(Icons.check, size: 14),
+                      label: const Text('Approuver', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () => _showModerationDialog(review, false),
-                    icon: const Icon(Icons.close, size: 16),
-                    label: const Text('Rejeter'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(0, 32),
+                  SizedBox(
+                    height: 32,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showModerationDialog(review, false),
+                      icon: const Icon(Icons.close, size: 14),
+                      label: const Text('Rejeter', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
                     ),
                   ),
                 ] else if (status == 'approved') ...[
-                  ElevatedButton.icon(
-                    onPressed: () => _showModerationDialog(review, false),
-                    icon: const Icon(Icons.block, size: 16),
-                    label: const Text('Masquer'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(0, 32),
+                  SizedBox(
+                    height: 32,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showModerationDialog(review, false),
+                      icon: const Icon(Icons.block, size: 14),
+                      label: const Text('Masquer', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
                     ),
                   ),
                 ] else if (status == 'rejected') ...[
-                  ElevatedButton.icon(
-                    onPressed: () => _showModerationDialog(review, true),
-                    icon: const Icon(Icons.visibility, size: 16),
-                    label: const Text('Afficher'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(0, 32),
+                  SizedBox(
+                    height: 32,
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showModerationDialog(review, true),
+                      icon: const Icon(Icons.visibility, size: 14),
+                      label: const Text('Afficher', style: TextStyle(fontSize: 12)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
                     ),
                   ),
                 ],
-                const SizedBox(width: 8),
-                IconButton(
-                  onPressed: () => _showDeleteConfirmation(review),
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  tooltip: 'Supprimer',
+                SizedBox(
+                  height: 32,
+                  width: 32,
+                  child: IconButton(
+                    onPressed: () => _showDeleteConfirmation(review),
+                    icon: const Icon(Icons.delete, color: Colors.red, size: 18),
+                    tooltip: 'Supprimer',
+                    padding: EdgeInsets.zero,
+                  ),
                 ),
               ],
             ),
@@ -574,8 +630,18 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
     String moderatorNote,
   ) async {
     try {
-      final currentUser = await _authService.getCurrentUserData();
-      final adminId = currentUser?.id ?? 'unknown_admin';
+      String adminId = 'unknown_admin';
+      String adminName = 'Admin';
+      
+      try {
+        final currentUser = await _authService.getCurrentUserData();
+        if (currentUser != null) {
+          adminId = currentUser.id ?? 'unknown_admin';
+          adminName = currentUser.fullName ?? 'Admin';
+        }
+      } catch (e) {
+        // Ignorer l'erreur d'auth, utiliser les valeurs par défaut
+      }
       
       await _firestore.collection('reviews').doc(review.id).update({
         'isModerated': true,
@@ -585,18 +651,22 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
         'moderatedAt': Timestamp.fromDate(DateTime.now()),
       });
 
-      await _auditService.log(
-        userId: adminId,
-        userName: currentUser?.fullName ?? 'Admin',
-        action: 'moderate_review',
-        entityType: 'review',
-        entityId: review.id,
-        oldValues: {'status': _getReviewStatus(review)},
-        newValues: {
-          'status': isApproving ? 'approved' : 'rejected',
-          'note': moderatorNote,
-        },
-      );
+      try {
+        await _auditService.log(
+          userId: adminId,
+          userName: adminName,
+          action: 'moderate_review',
+          entityType: 'review',
+          entityId: review.id ?? '',
+          oldValues: {'status': _getReviewStatus(review)},
+          newValues: {
+            'status': isApproving ? 'approved' : 'rejected',
+            'note': moderatorNote,
+          },
+        );
+      } catch (e) {
+        // Ignorer l'erreur d'audit
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -648,22 +718,36 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
 
   Future<void> _deleteReview(Review review) async {
     try {
-      final currentUser = await _authService.getCurrentUserData();
-      final adminId = currentUser?.id ?? 'unknown_admin';
+      String adminId = 'unknown_admin';
+      String adminName = 'Admin';
+      
+      try {
+        final currentUser = await _authService.getCurrentUserData();
+        if (currentUser != null) {
+          adminId = currentUser.id ?? 'unknown_admin';
+          adminName = currentUser.fullName ?? 'Admin';
+        }
+      } catch (e) {
+        // Ignorer l'erreur d'auth
+      }
       
       await _firestore.collection('reviews').doc(review.id).delete();
 
-      await _auditService.log(
-        userId: adminId,
-        userName: currentUser?.fullName ?? 'Admin',
-        action: 'delete_review',
-        entityType: 'review',
-        entityId: review.id,
-        oldValues: {
-          'review':
-              '${review.userName} - Produit ${review.productId} (${review.rating}⭐)',
-        },
-      );
+      try {
+        await _auditService.log(
+          userId: adminId,
+          userName: adminName,
+          action: 'delete_review',
+          entityType: 'review',
+          entityId: review.id ?? '',
+          oldValues: {
+            'review':
+                '${review.userName} - Produit ${review.productId} (${review.rating}⭐)',
+          },
+        );
+      } catch (e) {
+        // Ignorer l'erreur d'audit
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

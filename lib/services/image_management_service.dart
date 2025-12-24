@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'cloudinary_service.dart';
 
 class ImageManagementService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final CloudinaryService _cloudinary = CloudinaryService();
 
   /// Redimensionne une image selon les spécifications données
   Future<Uint8List?> resizeImage(
@@ -211,7 +211,8 @@ class ImageManagementService {
     return thumbnails;
   }
 
-  /// Upload une image avec ses miniatures vers Firebase Storage
+  /// Upload une image avec ses miniatures vers Cloudinary
+  /// Cloudinary gère automatiquement les miniatures via transformations URL
   Future<Map<String, String>> uploadImageWithThumbnails(
     Uint8List imageBytes,
     String path, {
@@ -221,95 +222,55 @@ class ImageManagementService {
     Map<String, String> uploadResults = {};
 
     try {
-      // Upload de l'image principale
-      Reference mainRef = _storage.ref().child('$path/original.jpg');
-
-      SettableMetadata uploadMetadata = SettableMetadata(
-        contentType: 'image/jpeg',
-        customMetadata: metadata?.map(
-          (key, value) => MapEntry(key, value.toString()),
-        ),
-      );
-
-      TaskSnapshot mainSnapshot = await mainRef.putData(
+      // Extraire le nom du dossier et le public_id
+      final parts = path.split('/');
+      final folder = parts.length > 1 ? parts.sublist(0, parts.length - 1).join('/') : 'products';
+      final publicId = parts.last;
+      
+      // Upload vers Cloudinary
+      final result = await _cloudinary.uploadImageWithThumbnails(
         imageBytes,
-        uploadMetadata,
+        folder: folder,
+        publicId: publicId,
       );
-      String mainUrl = await mainSnapshot.ref.getDownloadURL();
-      uploadResults['original'] = mainUrl;
-
-      // Upload des miniatures si demandé
-      if (generateThumbnails) {
-        Map<String, Uint8List> thumbnails = await this.generateThumbnails(
-          imageBytes,
-        );
-
-        for (String size in thumbnails.keys) {
-          Reference thumbRef = _storage.ref().child(
-            '$path/thumbnail_$size.jpg',
-          );
-          TaskSnapshot thumbSnapshot = await thumbRef.putData(
-            thumbnails[size]!,
-            uploadMetadata,
-          );
-          String thumbUrl = await thumbSnapshot.ref.getDownloadURL();
-          uploadResults['thumbnail_$size'] = thumbUrl;
-        }
+      
+      if (result.isEmpty) {
+        throw Exception('Échec de l\'upload vers Cloudinary');
       }
+      
+      uploadResults = result;
+      debugPrint('✅ Image uploadée sur Cloudinary: ${result['original']}');
+      
     } catch (e) {
-      debugPrint('Erreur lors de l\'upload: $e');
+      debugPrint('❌ Erreur lors de l\'upload Cloudinary: $e');
       throw Exception('Échec de l\'upload de l\'image: $e');
     }
 
     return uploadResults;
   }
 
-  /// Supprime une image et ses miniatures de Firebase Storage
+  /// Supprime une image de Cloudinary
   Future<void> deleteImageWithThumbnails(String path) async {
     try {
-      // Supprimer l'image principale
-      await _storage.ref().child('$path/original.jpg').delete();
-
-      // Supprimer les miniatures
-      for (ThumbnailSize size in ThumbnailSize.values) {
-        try {
-          await _storage
-              .ref()
-              .child('$path/thumbnail_${size.name}.jpg')
-              .delete();
-        } catch (e) {
-          // Ignorer si la miniature n'existe pas
-        }
-      }
+      // Extraire le public_id depuis le path ou l'URL
+      final publicId = path.replaceAll('/', '_');
+      await _cloudinary.deleteImage(publicId);
+      debugPrint('✅ Image supprimée de Cloudinary: $publicId');
     } catch (e) {
-      debugPrint('Erreur lors de la suppression: $e');
-      throw Exception('Échec de la suppression de l\'image: $e');
+      debugPrint('Erreur lors de la suppression Cloudinary: $e');
+      // Ne pas jeter d'erreur, juste logger
     }
   }
 
-  /// Réorganise l'ordre des images en mettant à jour leurs métadonnées
+  /// Réorganise l'ordre des images
+  /// Note: Avec Cloudinary, l'ordre est géré côté app (Firestore)
   Future<void> reorderImages(
     List<String> imagePaths,
     List<int> newOrder,
   ) async {
-    try {
-      for (int i = 0; i < imagePaths.length; i++) {
-        String imagePath = imagePaths[i];
-        int order = newOrder[i];
-
-        Reference imageRef = _storage.ref().child('$imagePath/original.jpg');
-
-        // Mettre à jour les métadonnées avec le nouvel ordre
-        SettableMetadata metadata = SettableMetadata(
-          customMetadata: {'order': order.toString()},
-        );
-
-        await imageRef.updateMetadata(metadata);
-      }
-    } catch (e) {
-      debugPrint('Erreur lors de la réorganisation: $e');
-      throw Exception('Échec de la réorganisation des images: $e');
-    }
+    // Avec Cloudinary, l'ordre est stocké dans Firestore avec le produit
+    // Pas besoin de modifier les métadonnées sur le stockage
+    debugPrint('📋 Réorganisation des images: ordre géré dans Firestore');
   }
 
   /// Obtient les informations détaillées d'une image

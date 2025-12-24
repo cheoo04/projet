@@ -14,6 +14,8 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+        // Activer le desugaring pour flutter_local_notifications
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -27,10 +29,13 @@ android {
         applicationId = "com.example.pharrell_phone"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = flutter.minSdkVersion  // Minimum requis pour Firebase Auth Phone
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Configuration pour Phone Authentication
+        multiDexEnabled = true
     }
 
     buildTypes {
@@ -44,4 +49,8 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

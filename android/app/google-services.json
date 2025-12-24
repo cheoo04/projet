@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "862175497641-0jfu7rdl7k3jik2vev5o319nbau6fel0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pharrell_phone",
+            "certificate_hash": "2204b7cb348d71b2d4fca843310955916d162f5d"
+          }
+        },
+        {
           "client_id": "862175497641-g1orna9etgt2trddq8ohohdomh6rpre6.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

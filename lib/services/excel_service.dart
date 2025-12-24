@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:excel/excel.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:path_provider/path_provider.dart';
+import 'web_file_saver.dart';
 import '../models/order.dart';
 import '../models/product.dart';
 import '../models/stock_movement.dart';
@@ -502,14 +505,25 @@ class ExcelService {
   }
 
   Future<String> _saveExcelFile(Excel excel, String fileName) async {
-    final directory = await getApplicationDocumentsDirectory();
     final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-    final file = File('${directory.path}/${fileName}_$timestamp.xlsx');
-
+    final fullFileName = '${fileName}_$timestamp.xlsx';
     final bytes = excel.encode()!;
-    await file.writeAsBytes(bytes);
-
-    return file.path;
+    
+    if (kIsWeb) {
+      // Sur le web, télécharger directement le fichier
+      await WebFileSaver.saveFile(
+        Uint8List.fromList(bytes), 
+        fullFileName, 
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      return fullFileName;
+    } else {
+      // Sur mobile, sauvegarder dans le répertoire de l'app
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/$fullFileName');
+      await file.writeAsBytes(bytes);
+      return file.path;
+    }
   }
 
   // ========== GESTION DES PRODUITS ==========

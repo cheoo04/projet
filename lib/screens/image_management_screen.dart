@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class ImageManagementScreen extends StatefulWidget {
   const ImageManagementScreen({super.key});
@@ -184,6 +186,7 @@ class _ImageManagementScreenState extends State<ImageManagementScreen> {
         }
 
         // Image existante
+        final imagePath = _imageUrls[index];
         return Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
@@ -193,12 +196,38 @@ class _ImageManagementScreenState extends State<ImageManagementScreen> {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  width: double.infinity,
-                  height: double.infinity,
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.image, size: 40, color: Colors.grey),
-                ),
+                child: imagePath.startsWith('http')
+                    ? Image.network(
+                        imagePath,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                        ),
+                      )
+                    : kIsWeb
+                        ? Image.network(
+                            imagePath,
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                            ),
+                          )
+                        : Image.file(
+                            File(imagePath),
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                            ),
+                          ),
               ),
               Positioned(
                 top: 4,
@@ -213,6 +242,26 @@ class _ImageManagementScreenState extends State<ImageManagementScreen> {
                     ),
                     child: const Icon(
                       Icons.close,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              // Bouton pour agrandir l'image
+              Positioned(
+                bottom: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: () => _showFullImage(imagePath),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.6),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.fullscreen,
                       size: 16,
                       color: Colors.white,
                     ),
@@ -304,6 +353,71 @@ class _ImageManagementScreenState extends State<ImageManagementScreen> {
       const SnackBar(
         content: Text('Image supprimée'),
         backgroundColor: Colors.orange,
+      ),
+    );
+  }
+
+  void _showFullImage(String imagePath) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          children: [
+            // Image en plein écran
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: imagePath.startsWith('http')
+                    ? Image.network(
+                        imagePath,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          padding: const EdgeInsets.all(32),
+                          color: Colors.grey[800],
+                          child: const Icon(Icons.broken_image, size: 80, color: Colors.white),
+                        ),
+                      )
+                    : kIsWeb
+                        ? Image.network(
+                            imagePath,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              padding: const EdgeInsets.all(32),
+                              color: Colors.grey[800],
+                              child: const Icon(Icons.broken_image, size: 80, color: Colors.white),
+                            ),
+                          )
+                        : Image.file(
+                            File(imagePath),
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              padding: const EdgeInsets.all(32),
+                              color: Colors.grey[800],
+                              child: const Icon(Icons.broken_image, size: 80, color: Colors.white),
+                            ),
+                          ),
+              ),
+            ),
+            // Bouton fermer
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

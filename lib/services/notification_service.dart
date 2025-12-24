@@ -90,6 +90,43 @@ class NotificationService {
         );
   }
 
+  // Obtenir toutes les notifications (pour admin)
+  Future<List<AppNotification>> getNotifications({int limit = 100}) async {
+    final snapshot = await _firestore
+        .collection(_collection)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .get();
+    
+    return snapshot.docs
+        .map((doc) => AppNotification.fromMap(doc.data()))
+        .toList();
+  }
+
+  // Envoyer une notification (alias pour create)
+  Future<void> sendNotification({
+    required String title,
+    String? body,
+    String? message,
+    required NotificationType type,
+    required String userId,
+    String? entityId,
+    String? entityType,
+    Map<String, dynamic> data = const {},
+    NotificationPriority priority = NotificationPriority.normal,
+  }) async {
+    return create(
+      title: title,
+      message: body ?? message ?? '',
+      type: type,
+      userId: userId,
+      entityId: entityId,
+      entityType: entityType,
+      data: data,
+      priority: priority,
+    );
+  }
+
   // Marquer une notification comme lue
   Future<void> markAsRead(String notificationId) async {
     await _firestore.collection(_collection).doc(notificationId).update({

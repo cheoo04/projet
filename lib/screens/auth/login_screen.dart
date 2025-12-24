@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '/services/auth_service.dart';
 import '/models/app_user.dart';
+import '/web_config/navigation_helper.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -180,7 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Bouton inscription
                     OutlinedButton(
                       onPressed: () {
-                        Navigator.pushNamed(context, '/register');
+                        AppNavigator.push(context, '/register');
                       },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -198,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Continuer en tant que visiteur
                     TextButton(
                       onPressed: () {
-                        Navigator.pushReplacementNamed(context, '/visitor');
+                        AppNavigator.go(context, '/visitor');
                       },
                       child: Text(
                         'Continuer en tant que visiteur',
@@ -235,17 +236,30 @@ class _LoginScreenState extends State<LoginScreen> {
           case UserRole.admin:
           case UserRole.manager:
             if (mounted && context.mounted) {
-              Navigator.pushReplacementNamed(context, '/admin');
+              debugPrint('🔑 Admin connecté - redirection vers /admin');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Bienvenue Admin !'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              AppNavigator.go(context, '/admin');
             }
             break;
           case UserRole.client:
             if (mounted && context.mounted) {
-              Navigator.pushReplacementNamed(context, '/client');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Connexion réussie !'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              AppNavigator.go(context, '/');
             }
             break;
           default:
             if (mounted && context.mounted) {
-              Navigator.pushReplacementNamed(context, '/visitor');
+              AppNavigator.go(context, '/');
             }
         }
       }

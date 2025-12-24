@@ -270,6 +270,8 @@ class _NotificationManagementScreenState
         return 'Stock';
       case NotificationType.info:
         return 'Général';
+      case NotificationType.success:
+        return 'Succès';
       case NotificationType.system:
         return 'Système';
       case NotificationType.review:
@@ -293,6 +295,8 @@ class _NotificationManagementScreenState
         return Colors.green;
       case NotificationType.info:
         return Colors.purple;
+      case NotificationType.success:
+        return Colors.green;
       case NotificationType.system:
         return Colors.red;
       case NotificationType.review:
@@ -316,6 +320,8 @@ class _NotificationManagementScreenState
         return Icons.inventory;
       case NotificationType.info:
         return Icons.info;
+      case NotificationType.success:
+        return Icons.check_circle;
       case NotificationType.system:
         return Icons.settings;
       case NotificationType.review:

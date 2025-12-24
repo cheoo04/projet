@@ -2,10 +2,12 @@ class AppNotification {
   final String id;
   final String title;
   final String message;
+  final String body; // Alias pour message
   final NotificationType type;
   final String? entityId;
   final String? entityType;
   final DateTime createdAt;
+  final DateTime date; // Alias pour createdAt
   final bool isRead;
   final String userId;
   final Map<String, dynamic> data;
@@ -14,16 +16,21 @@ class AppNotification {
   AppNotification({
     required this.id,
     required this.title,
-    required this.message,
+    String? message,
+    String? body,
     required this.type,
     this.entityId,
     this.entityType,
-    required this.createdAt,
+    DateTime? createdAt,
+    DateTime? date,
     this.isRead = false,
     required this.userId,
     this.data = const {},
     this.priority = NotificationPriority.normal,
-  });
+  }) : message = message ?? body ?? '',
+       body = body ?? message ?? '',
+       createdAt = createdAt ?? date ?? DateTime.now(),
+       date = date ?? createdAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     return {
@@ -72,6 +79,7 @@ enum NotificationType {
   system,
   user,
   info,
+  success, // Ajouté pour compatibilité avec les écrans admin
   warning,
   error,
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/advanced_analytics_service.dart';
-import '../models/category.dart';
+import '../models/category.dart' as models;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
@@ -30,7 +30,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   Map<String, dynamic>? _categoryStats;
   Map<String, dynamic>? _timeSeriesStats;
   Map<String, dynamic>? _trendAnalysis;
-  List<Category> _categories = [];
+  List<models.Category> _categories = [];
   bool _isLoading = false;
 
   @override
@@ -54,7 +54,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           .get();
       setState(() {
         _categories = categoriesSnapshot.docs
-            .map((doc) => Category.fromMap(doc.data()))
+            .map((doc) => models.Category.fromMap(doc.data()))
             .toList();
       });
     } catch (e) {
@@ -66,7 +66,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     setState(() => _isLoading = true);
 
     try {
-      final results = await Future.wait([
+      final results = await Future.wait<Map<String, dynamic>>([
         _analyticsService.getCategoryStats(
           startDate: _startDate,
           endDate: _endDate,
@@ -83,7 +83,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           endDate: _endDate,
           categoryFilter: _selectedCategory,
         ),
-      ]);
+      ]).timeout(const Duration(seconds: 15));
 
       setState(() {
         _categoryStats = results[0];
@@ -100,7 +100,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         );
       }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -148,6 +150,39 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 
     final categoryStatsMap =
         _categoryStats!['categoryStats'] as Map<String, dynamic>;
+    
+    // Check if there's actually data
+    if (categoryStatsMap.isEmpty || _categoryStats!['totalOrders'] == 0) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.analytics_outlined,
+                size: 64,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Aucune commande trouvée',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Les statistiques s\'afficheront lorsque des commandes seront passées.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
     final categories = categoryStatsMap.entries.toList()
       ..sort(
         (a, b) => (b.value['totalRevenue'] as double).compareTo(

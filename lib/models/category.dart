@@ -27,7 +27,7 @@ class Category {
       'imageUrl': imageUrl,
       'iconName': iconName,
       'isActive': isActive,
-      'createdAt': createdAt.millisecondsSinceEpoch,
+      'createdAt': createdAt,
       'productCount': productCount,
     };
   }
@@ -40,8 +40,20 @@ class Category {
       imageUrl: map['imageUrl'] ?? '',
       iconName: map['iconName'] ?? '',
       isActive: map['isActive'] ?? true,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? 0),
+      createdAt: _parseDateTime(map['createdAt']),
       productCount: map['productCount'] ?? 0,
     );
+  }
+
+  /// Parse une date depuis Firestore (Timestamp) ou un int (milliseconds)
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) return DateTime.now();
+    if (value is DateTime) return value;
+    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+    // Firestore Timestamp
+    if (value.runtimeType.toString().contains('Timestamp')) {
+      return (value as dynamic).toDate();
+    }
+    return DateTime.now();
   }
 }

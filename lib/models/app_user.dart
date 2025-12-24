@@ -88,10 +88,8 @@ class AppUser {
       address: map['address'],
       role: _parseUserRole(map['role']),
       isActive: map['isActive'] ?? true,
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? 0),
-      lastLoginAt: map['lastLoginAt'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['lastLoginAt'])
-          : null,
+      createdAt: _parseDate(map['createdAt']) ?? DateTime.now(),
+      lastLoginAt: _parseDate(map['lastLoginAt']),
       profileImageUrl: map['profileImageUrl'],
       permissions: Map<String, dynamic>.from(map['permissions'] ?? {}),
       profileCompleted: map['profileCompleted'] ?? false,
@@ -109,12 +107,21 @@ class AppUser {
       address: data['address'],
       role: _parseUserRole(data['role']),
       isActive: data['isActive'] ?? true,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      lastLoginAt: (data['lastLoginAt'] as Timestamp?)?.toDate(),
+      createdAt: _parseDate(data['createdAt']) ?? DateTime.now(),
+      lastLoginAt: _parseDate(data['lastLoginAt']),
       profileImageUrl: data['profileImageUrl'],
       permissions: Map<String, dynamic>.from(data['permissions'] ?? {}),
       profileCompleted: data['profileCompleted'] ?? false,
     );
+  }
+
+  /// Parse une date qui peut être Timestamp, int (milliseconds), String ou null
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   bool hasPermission(String permission) {

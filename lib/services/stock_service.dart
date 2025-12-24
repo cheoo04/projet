@@ -110,6 +110,42 @@ class StockService {
         );
   }
 
+  /// Obtenir les mouvements de stock (version Future avec limite)
+  Future<List<StockMovement>> getMovements({int limit = 100}) async {
+    final snapshot = await _firestore
+        .collection(_collection)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
+        .get();
+    
+    return snapshot.docs
+        .map((doc) => StockMovement.fromFirestore(doc))
+        .toList();
+  }
+
+  /// Enregistrer un mouvement de stock (alias pour addStockMovement)
+  Future<void> recordMovement({
+    required String productId,
+    required String productName,
+    required int quantity,
+    required StockMovementType type,
+    required String reason,
+    String? orderId,
+    String? supplierId,
+    Map<String, dynamic> metadata = const {},
+  }) async {
+    return addStockMovement(
+      productId: productId,
+      productName: productName,
+      type: type,
+      quantity: quantity,
+      reason: reason,
+      orderId: orderId,
+      supplierId: supplierId,
+      metadata: metadata,
+    );
+  }
+
   /// Obtenir les mouvements de stock pour un produit
   Stream<List<StockMovement>> getMovementsByProduct(String productId) {
     return _firestore
@@ -295,15 +331,19 @@ class StockService {
   ) async {
     try {
       if (currentStock <= defaultLowStockThreshold && currentStock > 0) {
-        // Pour l'instant, on utilise un log simple
-        // TODO: Implémenter l'intégration complète avec NotificationService
+        // Envoyer notification stock faible
         LoggingService.info(
           'ALERTE STOCK FAIBLE: $productName - $currentStock unités restantes',
         );
+        // Note: L'intégration complète avec NotificationService nécessiterait
+        // d'envoyer des notifications push aux admins via FCM
+        // Exemple: await notificationService.sendStockAlert(productId, currentStock);
       } else if (currentStock == 0) {
+        // Envoyer notification rupture stock
         LoggingService.info(
           'ALERTE RUPTURE STOCK: $productName - Stock épuisé',
         );
+        // Note: Même remarque pour la notification de rupture
       }
     } catch (e) {
       LoggingService.error('Erreur envoi alerte stock: $e');

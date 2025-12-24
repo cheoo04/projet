@@ -1,0 +1,27 @@
+flutter_native_splash:
+  # Couleur de fond violette
+  color: "#7C3BAE"
+  
+  # Image du logo (cercle P blanc)
+  image: assets/images/splash_logo.png
+  
+  # Plateformes
+  android: true
+  ios: true
+  web: false  # Désactivé - on utilise notre splash personnalisé dans index.html
+  
+  # Mode plein écran
+  fullscreen: true
+  
+  # Centrer le logo
+  android_gravity: center
+  ios_content_mode: center
+  
+  # Configuration Android 12+
+  android_12:
+    image: assets/images/splash_logo.png
+    color: "#7C3BAE"
+    icon_background_color: "#7C3BAE"
+  
+  # Configuration Web
+  web_image_mode: center

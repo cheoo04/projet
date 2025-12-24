@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdvancedAnalyticsService {
@@ -14,7 +15,8 @@ class AdvancedAnalyticsService {
           .collection('orders')
           .where('createdAt', isGreaterThanOrEqualTo: startDate)
           .where('createdAt', isLessThanOrEqualTo: endDate)
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 10));
 
       if (ordersSnapshot.docs.isEmpty) {
         return _getEmptyCategoryStats(startDate, endDate);
@@ -77,7 +79,6 @@ class AdvancedAnalyticsService {
         'categoryStats': categoryStats,
       };
     } catch (e) {
-      // Erreur dans getCategoryStats: $e
       return _getEmptyCategoryStats(startDate, endDate);
     }
   }
@@ -95,7 +96,8 @@ class AdvancedAnalyticsService {
           .where('createdAt', isGreaterThanOrEqualTo: startDate)
           .where('createdAt', isLessThanOrEqualTo: endDate)
           .orderBy('createdAt')
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 10));
 
       Map<String, Map<String, dynamic>> periodData = {};
 
@@ -160,7 +162,6 @@ class AdvancedAnalyticsService {
         },
       };
     } catch (e) {
-      // Erreur dans getTimeSeriesStats: $e
       return {
         'timeSeries': [],
         'summary': {
@@ -219,9 +220,9 @@ class AdvancedAnalyticsService {
     }
   }
 
-  // Méthodes utilitaires privées
+  // Méthodes utilitaires
 
-  Map<String, dynamic> _getEmptyCategoryStats(
+  Map<String, dynamic> getEmptyCategoryStats(
     DateTime startDate,
     DateTime endDate,
   ) {
@@ -233,7 +234,7 @@ class AdvancedAnalyticsService {
     };
   }
 
-  Map<String, dynamic> _getEmptyTrendAnalysis() {
+  Map<String, dynamic> getEmptyTrendAnalysis() {
     return {
       'trend': {'direction': 'stable', 'strength': 'none'},
       'volatility': {'level': 'none'},
@@ -245,6 +246,17 @@ class AdvancedAnalyticsService {
         'worstPeriod': null,
       },
     };
+  }
+
+  Map<String, dynamic> _getEmptyCategoryStats(
+    DateTime startDate,
+    DateTime endDate,
+  ) {
+    return getEmptyCategoryStats(startDate, endDate);
+  }
+
+  Map<String, dynamic> _getEmptyTrendAnalysis() {
+    return getEmptyTrendAnalysis();
   }
 
   String _getPeriodKey(DateTime date, String granularity) {

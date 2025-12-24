@@ -1,13 +1,16 @@
 {
-    "name": "pharrell_phone",
-    "short_name": "pharrell_phone",
-    "start_url": ".",
+    "name": "Pharrell Phone - Boutique Smartphones",
+    "short_name": "Pharrell Phone",
+    "description": "Boutique en ligne de smartphones et accessoires - Livraison rapide en France",
+    "start_url": "/",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#9B6DB8",
+    "theme_color": "#9B6DB8",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
+    "categories": ["shopping", "lifestyle"],
+    "lang": "fr-FR",
+    "scope": "/",
     "icons": [
         {
             "src": "icons/Icon-192.png",
@@ -30,6 +33,23 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Catalogue",
+            "short_name": "Catalogue",
+            "description": "Voir tous nos produits",
+            "url": "/catalog",
+            "icons": [{"src": "icons/Icon-192.png", "sizes": "192x192"}]
+        },
+        {
+            "name": "Mon panier",
+            "short_name": "Panier",
+            "description": "Voir mon panier",
+            "url": "/cart",
+            "icons": [{"src": "icons/Icon-192.png", "sizes": "192x192"}]
         }
     ]
 }

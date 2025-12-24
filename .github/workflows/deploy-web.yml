@@ -1,0 +1,122 @@
+# Workflow CI/CD pour déploiement web sur Firebase Hosting
+# Déclenché sur push vers main ou manuellement
+
+name: Deploy Web to Firebase Hosting
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'lib/**'
+      - 'web/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/deploy-web.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environnement de déploiement'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  FLUTTER_VERSION: '3.38.5'
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐦 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get dependencies
+        run: flutter pub get
+
+      - name: 🔍 Analyze code
+        run: flutter analyze --no-fatal-infos
+        continue-on-error: true
+
+      - name: 🧪 Run tests
+        run: flutter test
+        continue-on-error: true
+
+      - name: 🏗️ Build web release
+        run: |
+          flutter build web --release -O4
+          echo "Build completed successfully"
+
+      - name: 📊 Check bundle size
+        run: |
+          echo "📦 Bundle size analysis:"
+          ls -lh build/web/main.dart.js
+          du -sh build/web/
+
+      - name: 🚀 Deploy to Firebase Hosting (Staging)
+        if: github.event.inputs.environment == 'staging' || github.event_name == 'push'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FIRST_PRO_CHEOO }}
+          projectId: first-pro-cheoo
+          channelId: staging
+          expires: 7d
+
+      - name: 🚀 Deploy to Firebase Hosting (Production)
+        if: github.event.inputs.environment == 'production'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_FIRST_PRO_CHEOO }}
+          projectId: first-pro-cheoo
+          channelId: live
+
+      - name: 📝 Post deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** ${{ github.event.inputs.environment || 'staging' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Bundle Size" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          ls -lh build/web/main.dart.js >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  lighthouse-audit:
+    name: Lighthouse Audit
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'staging' || github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: 🔦 Run Lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: |
+            https://first-pro-cheoo--staging-*.web.app/
+          configPath: '.github/lighthouse/lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+        continue-on-error: true
+
+      - name: 📊 Lighthouse Report
+        run: |
+          echo "## 🔦 Lighthouse Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Voir les résultats dans les artifacts du workflow." >> $GITHUB_STEP_SUMMARY
