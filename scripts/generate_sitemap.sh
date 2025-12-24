@@ -4,7 +4,7 @@
 
 set -e
 
-SITE_URL="https://pharrell-phone.web.app"
+SITE_URL="https://first-pro-cheoo.web.app"
 OUTPUT_FILE="web/sitemap.xml"
 
 echo "🗺️ Génération du sitemap.xml..."

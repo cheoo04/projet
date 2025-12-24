@@ -197,7 +197,7 @@ class AuthService {
       if (existingUser != null) {
         // Utilisateur existant - mettre à jour la dernière connexion
         await _firestore.collection('users').doc(firebaseUser.uid).update({
-          'lastLoginAt': DateTime.now().toIso8601String(),
+          'lastLoginAt': FieldValue.serverTimestamp(),
           'authProvider': 'google',
         });
         // Rafraîchir le token FCM
@@ -399,14 +399,23 @@ class AuthService {
     }
     final d = doc.data()!;
     return AppUser(
-      id: d['uid'],
-      email: d['email'],
-      firstName: d['firstName'],
-      lastName: d['lastName'],
+      id: d['uid'] ?? uid,
+      email: d['email'] ?? '',
+      firstName: d['firstName'] ?? '',
+      lastName: d['lastName'] ?? '',
       role: _parseRole(d['role']),
-      createdAt: (d['createdAt'] as Timestamp).toDate(),
+      createdAt: _parseDateTime(d['createdAt']) ?? DateTime.now(),
       isActive: d['isActive'] ?? true,
     );
+  }
+
+  /// Parse une date qui peut être Timestamp, int, String ou null
+  DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   void _registerFailedAttempt(String email) {

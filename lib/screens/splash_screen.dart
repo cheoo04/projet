@@ -71,11 +71,15 @@ class _SplashScreenState extends State<SplashScreen>
   }
   
   Future<void> _initializeApp() async {
-    // Sur WEB: Navigation immédiate après 1 seconde d'animation
+    // Sur WEB: Navigation immédiate après animation courte
     // L'initialisation Firebase continue en arrière-plan
     if (kIsWeb) {
-      await Future.delayed(const Duration(milliseconds: 1000));
-      FlutterNativeSplash.remove();
+      await Future.delayed(const Duration(milliseconds: 500));
+      try {
+        FlutterNativeSplash.remove();
+      } catch (e) {
+        debugPrint('⚠️ FlutterNativeSplash.remove() error: $e');
+      }
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/home');
       }

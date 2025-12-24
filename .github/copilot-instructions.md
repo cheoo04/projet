@@ -157,8 +157,9 @@ Fichiers essentiels:
   - [x] Favicon et icônes PWA avec logo Pharrell Phone ✅
   - [x] Titre page personnalisé (Pharrell Phone - Boutique Smartphones) ✅
   - [x] URLs sitemap.xml et robots.txt corrigées (first-pro-cheoo.web.app) ✅
+  - [x] Google Search Console validé ✅
+  - [ ] Soumettre sitemap.xml à Google Search Console
   - [ ] Générer sitemap.xml dynamique avec produits Firestore
-  - [ ] Soumettre sitemap à Google Search Console
 
 - [x] Phase 5: Corrections bugs web ✅ **DONE**
   - [x] Corriger Image.file pour web (kIsWeb check) ✅
