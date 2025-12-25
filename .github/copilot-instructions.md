@@ -63,26 +63,37 @@ final router = GoRouter(
 | Fonctionnalité Mobile | Adaptation Web | Status |
 |-----------------------|----------------|--------|
 | FCM Notifications | Firebase Cloud Messaging Web + Browser API | ✅ Implémenté |
-| Push Notifications Admin | Cloud Functions (nécessite billing) | ⚠️ En attente |
+| Push Notifications Admin | **Vercel Serverless API (GRATUIT)** | ✅ Implémenté |
 | Auth biométrique | Désactivée (non supportée web) | ⚠️ À remplacer par 2FA |
 | ImagePicker | Input HTML5 `<input type="file">` | ✅ Implémenté |
-| SharePlus | Web Share API + boutons sociaux | 🔄 En cours |
-| Cache Hive/SQLite | IndexedDB + Cache API | 🔄 En cours |
+| SharePlus | Web Share API + boutons sociaux | ✅ Implémenté |
+| Cache Hive/SQLite | IndexedDB + Cache API | ✅ Implémenté |
 
-### ⚠️ Cloud Functions - Configuration requise
+### ✅ Push Notifications via Vercel (GRATUIT - sans billing GCP)
 
-Les Cloud Functions pour l'envoi de push notifications nécessitent l'activation de la **facturation Google Cloud** :
+Les notifications push sont envoyées via une API serverless hébergée sur **Vercel** (100% gratuit).
 
-1. Aller sur [Google Cloud Console Billing](https://console.cloud.google.com/billing/linkedaccount?project=first-pro-cheoo)
-2. Lier un compte de facturation au projet `first-pro-cheoo`
-3. Déployer les fonctions : `firebase deploy --only functions`
+**Architecture :**
+```
+App Admin → API Vercel → Firebase FCM → Téléphones utilisateurs
+```
 
-**Quota gratuit Cloud Functions :**
-- 2 millions d'invocations/mois
-- 400 000 Go-secondes/mois
-- Vous ne paierez rien sauf si vous dépassez ces limites
+**Fichiers :**
+- `vercel-notifications/api/send-notification.js` - Endpoint API
+- `lib/services/vercel_notification_service.dart` - Service Flutter
 
-**Alternative temporaire :** Utiliser la [Firebase Console > Cloud Messaging](https://console.firebase.google.com/project/first-pro-cheoo/messaging) pour envoyer manuellement des notifications au topic `all_users`.
+**URL de l'API :** `https://projet-eta-seven.vercel.app/api/send-notification`
+
+**Dashboard Vercel :** [https://vercel.com/kouakou-yahs-projects/projet](https://vercel.com/kouakou-yahs-projects/projet)
+
+**Pour modifier l'API Vercel :**
+1. Éditer `vercel-notifications/api/send-notification.js`
+2. Push sur GitHub → Vercel redéploie automatiquement
+
+**⚠️ Notifications iOS Safari :**
+- Requiert iOS 16.4+
+- L'utilisateur doit ajouter le site à l'écran d'accueil
+- Puis accepter les notifications depuis l'app PWA
 
 ### Responsive breakpoints
 ```dart
@@ -274,6 +285,7 @@ MyService._internal();
 - `lib/services/web_file_saver_web.dart` - HTML5 Blob download for web
 - `lib/services/web_file_saver_stub.dart` - Stub for non-web platforms
 - `lib/services/crash_handler.dart` - Crashlytics with kIsWeb check (disabled on web)
+- `lib/services/vercel_notification_service.dart` - Envoi notifications via API Vercel
 - `lib/web_config/web_router.dart` - Go Router configuration
 - `lib/web_config/seo_config.dart` - Dynamic meta tags (conditional imports)
 - `lib/web_config/seo_config_web.dart` - DOM manipulation avec package:web
@@ -281,6 +293,11 @@ MyService._internal();
 - `lib/web_config/responsive_config.dart` - Breakpoint utilities + ResponsiveContainer
 - `lib/widgets/layouts/desktop_layout.dart` - Layout desktop avec sidebar
 - `lib/widgets/desktop_product_card.dart` - ProductCard optimisé desktop
+
+**Vercel Notifications API:**
+- `vercel-notifications/api/send-notification.js` - Endpoint serverless
+- `vercel-notifications/package.json` - Dépendances Node.js
+- `vercel-notifications/vercel.json` - Configuration Vercel
 
 **Web adaptations pattern:**
 ```dart
