@@ -9,9 +9,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 /// des notifications FCM aux utilisateurs. Cela évite de payer pour
 /// les Cloud Functions de Google.
 class VercelNotificationService {
-  // URL de l'API Vercel - À CONFIGURER après déploiement
-  // Remplacer par votre URL réelle après "vercel --prod"
-  static const String _defaultApiUrl = 'https://pharrell-phone-notifications.vercel.app/api/send-notification';
+  // URL de l'API Vercel (déployée sur Vercel)
+  static const String _defaultApiUrl = 'https://projet-eta-seven.vercel.app/api/send-notification';
   
   final String _apiUrl;
   final FirebaseAuth _auth = FirebaseAuth.instance;
