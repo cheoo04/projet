@@ -1,0 +1,16 @@
+{
+  "name": "pharrell-phone-notifications",
+  "version": "1.0.0",
+  "description": "API Vercel pour envoyer des notifications push FCM - Pharrell Phone",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
