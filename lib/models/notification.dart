@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class AppNotification {
   final String id;
   final String title;
@@ -49,17 +51,28 @@ class AppNotification {
   }
 
   factory AppNotification.fromMap(Map<String, dynamic> map) {
+    // Gérer createdAt qui peut être un Timestamp Firestore ou un int
+    DateTime parsedDate;
+    final createdAtValue = map['createdAt'];
+    if (createdAtValue is Timestamp) {
+      parsedDate = createdAtValue.toDate();
+    } else if (createdAtValue is int) {
+      parsedDate = DateTime.fromMillisecondsSinceEpoch(createdAtValue);
+    } else {
+      parsedDate = DateTime.now();
+    }
+
     return AppNotification(
       id: map['id'] ?? '',
       title: map['title'] ?? '',
-      message: map['message'] ?? '',
+      message: map['message'] ?? map['body'] ?? '',
       type: NotificationType.values.firstWhere(
-        (e) => e.toString() == map['type'],
+        (e) => e.toString() == map['type'] || e.name == map['type'],
         orElse: () => NotificationType.info,
       ),
       entityId: map['entityId'],
       entityType: map['entityType'],
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['createdAt'] ?? 0),
+      createdAt: parsedDate,
       isRead: map['isRead'] ?? false,
       userId: map['userId'] ?? '',
       data: Map<String, dynamic>.from(map['data'] ?? {}),
