@@ -19,7 +19,7 @@ class SEOConfig {
   static const String defaultKeywords = 
       'smartphone, téléphone, iPhone, Samsung, accessoires, coque, chargeur, écouteurs';
   static const String defaultImage = 'assets/images/og-image.png';
-  static const String siteUrl = 'https://first-pro-cheoo.web.app';
+  static const String siteUrl = 'https://pharrellphone.com';
 
   /// Met à jour les meta tags pour un produit (web uniquement)
   static void updateMetaTags(Product product) {

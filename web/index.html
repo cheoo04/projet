@@ -181,9 +181,58 @@
       if (document.querySelector('flt-glass-pane') || document.querySelector('flutter-view')) {
         console.log('🎨 Flutter prêt - masquage du splash');
         hideSplash();
+        // Corriger le viewport de Flutter pour l'accessibilité
+        fixFlutterViewport();
         observer.disconnect();
       }
     });
+    
+    // Corriger le viewport modifié par Flutter
+    function fixFlutterViewport() {
+      // Chercher TOUS les meta viewport (Flutter en crée un nouveau avec flt-viewport)
+      const viewports = document.querySelectorAll('meta[name="viewport"]');
+      viewports.forEach(function(viewport) {
+        const content = viewport.getAttribute('content') || '';
+        if (content.includes('user-scalable=no') || content.includes('maximum-scale=1')) {
+          // Permettre le zoom pour l'accessibilité (malvoyants)
+          viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes');
+          console.log('♿ Viewport corrigé pour accessibilité:', viewport.outerHTML);
+        }
+      });
+    }
+    
+    // Observer les changements de viewport et les nouveaux éléments
+    const headObserver = new MutationObserver(function(mutations) {
+      mutations.forEach(function(mutation) {
+        // Vérifier les nouveaux nœuds ajoutés (Flutter ajoute son propre viewport)
+        if (mutation.addedNodes) {
+          mutation.addedNodes.forEach(function(node) {
+            if (node.nodeName === 'META' && node.getAttribute('name') === 'viewport') {
+              setTimeout(fixFlutterViewport, 100);
+            }
+          });
+        }
+        // Vérifier les attributs modifiés
+        if (mutation.type === 'attributes' && mutation.attributeName === 'content') {
+          if (mutation.target.getAttribute('name') === 'viewport') {
+            fixFlutterViewport();
+          }
+        }
+      });
+    });
+    
+    // Observer le head pour les nouveaux meta viewport
+    headObserver.observe(document.head, { 
+      childList: true, 
+      subtree: true, 
+      attributes: true, 
+      attributeFilter: ['content'] 
+    });
+    
+    // Corriger immédiatement si déjà présent
+    setTimeout(fixFlutterViewport, 500);
+    setTimeout(fixFlutterViewport, 1000);
+    setTimeout(fixFlutterViewport, 2000);
     
     observer.observe(document.body, { childList: true, subtree: true });
 

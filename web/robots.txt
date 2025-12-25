@@ -3,7 +3,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://first-pro-cheoo.web.app/sitemap.xml
+Sitemap: https://pharrellphone.com/sitemap.xml
 
 # Bloquer les pages admin
 Disallow: /admin

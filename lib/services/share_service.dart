@@ -57,7 +57,7 @@ class ShareService {
   /// Partage web via Web Share API ou fallback
   static Future<void> _shareProductWeb(Product product, BuildContext context) async {
     final message = _buildShareMessage(product);
-    final productUrl = 'https://first-pro-cheoo.web.app/product/${product.id}';
+    final productUrl = 'https://pharrellphone.com/product/${product.id}';
     
     // Essayer Web Share API
     final success = await web_share.shareViaWebAPI(
