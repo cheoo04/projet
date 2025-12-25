@@ -63,10 +63,26 @@ final router = GoRouter(
 | Fonctionnalité Mobile | Adaptation Web | Status |
 |-----------------------|----------------|--------|
 | FCM Notifications | Firebase Cloud Messaging Web + Browser API | ✅ Implémenté |
+| Push Notifications Admin | Cloud Functions (nécessite billing) | ⚠️ En attente |
 | Auth biométrique | Désactivée (non supportée web) | ⚠️ À remplacer par 2FA |
 | ImagePicker | Input HTML5 `<input type="file">` | ✅ Implémenté |
 | SharePlus | Web Share API + boutons sociaux | 🔄 En cours |
 | Cache Hive/SQLite | IndexedDB + Cache API | 🔄 En cours |
+
+### ⚠️ Cloud Functions - Configuration requise
+
+Les Cloud Functions pour l'envoi de push notifications nécessitent l'activation de la **facturation Google Cloud** :
+
+1. Aller sur [Google Cloud Console Billing](https://console.cloud.google.com/billing/linkedaccount?project=first-pro-cheoo)
+2. Lier un compte de facturation au projet `first-pro-cheoo`
+3. Déployer les fonctions : `firebase deploy --only functions`
+
+**Quota gratuit Cloud Functions :**
+- 2 millions d'invocations/mois
+- 400 000 Go-secondes/mois
+- Vous ne paierez rien sauf si vous dépassez ces limites
+
+**Alternative temporaire :** Utiliser la [Firebase Console > Cloud Messaging](https://console.firebase.google.com/project/first-pro-cheoo/messaging) pour envoyer manuellement des notifications au topic `all_users`.
 
 ### Responsive breakpoints
 ```dart

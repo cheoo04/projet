@@ -1,0 +1,18 @@
+# Compiled JavaScript files
+lib/
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# Local Firebase emulator data
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

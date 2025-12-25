@@ -1,6 +1,14 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notification.dart';
 
+/// Types de cibles pour les notifications push
+enum NotificationTargetType {
+  all,      // Tous les utilisateurs
+  clients,  // Clients et visiteurs
+  admins,   // Admins et managers
+  specific, // Utilisateurs spécifiques
+}
+
 class NotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final String _collection = 'notifications';
@@ -33,6 +41,34 @@ class NotificationService {
         .collection(_collection)
         .doc(notification.id)
         .set(notification.toMap());
+  }
+
+  /// Envoyer une notification push à tous les utilisateurs ou un groupe spécifique
+  /// Cette méthode crée un document dans Firestore qui déclenche la Cloud Function
+  Future<void> sendPushNotification({
+    required String title,
+    required String body,
+    required NotificationType type,
+    NotificationTargetType targetType = NotificationTargetType.all,
+    List<String>? targetUserIds,
+    String? entityId,
+    String? imageUrl,
+    Map<String, dynamic>? additionalData,
+  }) async {
+    final notificationDoc = {
+      'title': title,
+      'body': body,
+      'type': type.name,
+      'targetType': targetType.name,
+      if (targetUserIds != null) 'targetUserIds': targetUserIds,
+      if (entityId != null) 'entityId': entityId,
+      if (imageUrl != null) 'imageUrl': imageUrl,
+      if (additionalData != null) 'data': additionalData,
+      'createdAt': FieldValue.serverTimestamp(),
+      'pushSent': false,
+    };
+
+    await _firestore.collection(_collection).add(notificationDoc);
   }
 
   // Créer une notification pour tous les admins

@@ -25,6 +25,7 @@ class _ModernNotificationManagementScreenState
   final _titleController = TextEditingController();
   final _bodyController = TextEditingController();
   model.NotificationType _selectedType = model.NotificationType.info;
+  NotificationTargetType _selectedTarget = NotificationTargetType.all;
   bool _isSending = false;
   
   List<model.AppNotification> _notifications = [];
@@ -95,6 +96,31 @@ class _ModernNotificationManagementScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Avertissement Cloud Functions
+            Card(
+              color: AppTheme.warning.withOpacity(0.1),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: AppTheme.warning, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Les notifications sont enregistrées. Pour les push en temps réel, activez Cloud Functions dans Firebase Console.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.warning,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
             // En-tête
             Card(
               color: AppTheme.primaryViolet.withOpacity(0.1),
@@ -189,8 +215,46 @@ class _ModernNotificationManagementScreenState
             ),
             
             const SizedBox(height: 24),
+                        // Cible de la notification
+            Text(
+              'Destinataires',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Sélectionnez qui recevra cette notification push',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
+            ),
+            const SizedBox(height: 12),
             
-            // Titre
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _buildTargetChip(
+                  NotificationTargetType.all,
+                  'Tous les utilisateurs',
+                  Icons.groups,
+                ),
+                _buildTargetChip(
+                  NotificationTargetType.clients,
+                  'Clients uniquement',
+                  Icons.person,
+                ),
+                _buildTargetChip(
+                  NotificationTargetType.admins,
+                  'Admins uniquement',
+                  Icons.admin_panel_settings,
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 24),
+                        // Titre
             Text(
               'Titre',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -537,6 +601,40 @@ class _ModernNotificationManagementScreenState
     }
   }
 
+  /// Widget pour sélectionner le type de cible
+  Widget _buildTargetChip(
+    NotificationTargetType target,
+    String label,
+    IconData icon,
+  ) {
+    final isSelected = _selectedTarget == target;
+    final color = AppTheme.primaryViolet;
+    
+    return ChoiceChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: isSelected ? Colors.white : color),
+          const SizedBox(width: 6),
+          Text(label),
+        ],
+      ),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) {
+          setState(() => _selectedTarget = target);
+        }
+      },
+      selectedColor: color,
+      backgroundColor: color.withOpacity(0.1),
+      side: BorderSide(color: color.withOpacity(0.3)),
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : color,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+  }
+
   Future<void> _sendNotification() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -545,22 +643,22 @@ class _ModernNotificationManagementScreenState
     setState(() => _isSending = true);
 
     try {
-      // Envoyer la notification
-      // Note: Pour implémenter la sélection d'utilisateurs cibles,
-      // ajouter un sélecteur d'utilisateurs dans le formulaire
-      // et passer la liste des userId sélectionnés
-      await _notificationService.sendNotification(
+      // Envoyer la notification push via Cloud Function
+      await _notificationService.sendPushNotification(
         title: _titleController.text,
         body: _bodyController.text,
         type: _selectedType,
-        userId: 'admin', // TODO: Remplacer par la liste d'utilisateurs sélectionnés
+        targetType: _selectedTarget,
       );
 
       if (mounted) {
         // Réinitialiser le formulaire
         _titleController.clear();
         _bodyController.clear();
-        setState(() => _selectedType = model.NotificationType.info);
+        setState(() {
+          _selectedType = model.NotificationType.info;
+          _selectedTarget = NotificationTargetType.all;
+        });
 
         // Recharger les notifications
         await _loadNotifications();
@@ -570,7 +668,7 @@ class _ModernNotificationManagementScreenState
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✓ Notification envoyée avec succès'),
+            content: Text('✓ Notification push envoyée avec succès'),
             backgroundColor: AppTheme.success,
           ),
         );
