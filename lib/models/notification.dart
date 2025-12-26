@@ -72,7 +72,7 @@ class AppNotification {
       ),
       entityId: map['entityId'],
       entityType: map['entityType'],
-      createdAt: parsedDate,
+!      createdAt: parsedDate,
       isRead: map['isRead'] ?? false,
       userId: map['userId'] ?? '',
       data: Map<String, dynamic>.from(map['data'] ?? {}),
