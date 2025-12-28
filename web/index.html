@@ -74,10 +74,10 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #FFFFFF;
+      background: linear-gradient(135deg, #9B6DB8 0%, #7C3BAE 100%);
     }
 
-    /* Splash screen minimaliste - fond blanc avec spinner discret */
+    /* Splash screen Pharrell Phone - Style original */
     #pharrell-splash {
       position: fixed;
       top: 0;
@@ -88,9 +88,9 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      background: #FFFFFF;
+      background: linear-gradient(135deg, #9B6DB8 0%, #7C3BAE 100%);
       z-index: 9999;
-      transition: opacity 0.2s ease-out;
+      transition: opacity 0.3s ease-out;
     }
 
     #pharrell-splash.hidden {
@@ -98,33 +98,57 @@
       pointer-events: none;
     }
 
-    /* Logo simple */
+    /* Logo P dans cercle blanc */
     .splash-logo {
-      width: 80px;
-      height: 80px;
-      background: linear-gradient(135deg, #9B6DB8 0%, #7C3BAE 100%);
-      border-radius: 16px;
+      width: 160px;
+      height: 160px;
+      background: white;
+      border-radius: 50%;
       display: flex;
       justify-content: center;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 24px;
+      box-shadow: 0 0 40px rgba(255, 255, 255, 0.4);
     }
 
     .splash-logo-text {
-      font-size: 40px;
+      font-size: 80px;
       font-weight: 700;
-      color: white;
+      color: #9B6DB8;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
 
-    /* Spinner simple */
+    /* Titre */
+    .splash-title {
+      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .splash-subtitle {
+      color: rgba(255, 255, 255, 0.85);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      margin-bottom: 32px;
+    }
+
+    /* Spinner de chargement */
     .splash-spinner {
-      width: 24px;
-      height: 24px;
-      border: 2px solid #E5E7EB;
-      border-top-color: #9B6DB8;
+      width: 28px;
+      height: 28px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
       border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      animation: spin 0.7s linear infinite;
+    }
+
+    .splash-loading-text {
+      color: rgba(255, 255, 255, 0.6);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 11px;
+      margin-top: 12px;
     }
 
     @keyframes spin {
@@ -133,25 +157,32 @@
   </style>
 </head>
 <body>
-  <!-- Splash screen minimaliste -->
+  <!-- Splash screen Pharrell Phone -->
   <div id="pharrell-splash">
     <div class="splash-logo">
       <span class="splash-logo-text">P</span>
     </div>
+    <div class="splash-title">Pharrell Phone</div>
+    <div class="splash-subtitle">Qualité supérieure / Satisfaction garantie</div>
     <div class="splash-spinner"></div>
+    <div class="splash-loading-text">Chargement...</div>
   </div>
 
   <script>
-    // Fonction pour masquer le splash
+    // Masquer le splash rapidement
     function hideSplash() {
       const splash = document.getElementById('pharrell-splash');
       if (splash) {
         splash.classList.add('hidden');
-        setTimeout(() => splash.remove(), 200);
+        setTimeout(() => {
+          splash.remove();
+          // Fond blanc pour Flutter
+          document.body.style.background = '#FFFFFF';
+        }, 300);
       }
     }
 
-    // Observer quand Flutter est prêt
+    // Observer quand Flutter est prêt (dès qu'il commence à render)
     const observer = new MutationObserver(function(mutations) {
       if (document.querySelector('flt-glass-pane') || document.querySelector('flutter-view')) {
         hideSplash();
@@ -160,7 +191,7 @@
       }
     });
     
-    // Corriger le viewport modifié par Flutter
+    // Corriger le viewport pour accessibilité
     function fixFlutterViewport() {
       const viewports = document.querySelectorAll('meta[name="viewport"]');
       viewports.forEach(function(viewport) {
@@ -197,19 +228,17 @@
     });
     
     setTimeout(fixFlutterViewport, 500);
-    setTimeout(fixFlutterViewport, 1000);
     
     observer.observe(document.body, { childList: true, subtree: true });
 
-    // Timeout réduit - masquer après 4 secondes max
-    setTimeout(hideSplash, 4000);
+    // Timeout court - 2.5 secondes max (best practice 2025)
+    // L'utilisateur doit voir l'interface rapidement
+    setTimeout(hideSplash, 2500);
 
-    // Enregistrer le service worker
+    // Service worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/custom-service-worker.js')
-          .then(reg => console.log('✅ SW enregistré'))
-          .catch(err => console.warn('⚠️ SW erreur:', err));
+        navigator.serviceWorker.register('/custom-service-worker.js').catch(() => {});
       });
     }
   </script>
