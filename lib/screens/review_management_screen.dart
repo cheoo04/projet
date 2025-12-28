@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/review.dart';
 import '../services/audit_service.dart';
 import '../services/auth_service.dart';
+import '../services/review_service.dart';
 import 'package:intl/intl.dart';
 
 class ReviewManagementScreen extends StatefulWidget {
@@ -650,6 +651,11 @@ class _ReviewManagementScreenState extends State<ReviewManagementScreen> {
         'moderatorNote': moderatorNote.isNotEmpty ? moderatorNote : null,
         'moderatedAt': Timestamp.fromDate(DateTime.now()),
       });
+
+      // Mettre à jour le compteur de rating du produit
+      if (review.productId.isNotEmpty) {
+        await ReviewService.updateProductRating(review.productId);
+      }
 
       try {
         await _auditService.log(
