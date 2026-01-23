@@ -35,10 +35,9 @@ class OptimizedImage extends StatelessWidget {
     final icColor = iconColor ?? (isDark ? Colors.grey.shade600 : AppTheme.grey400);
     
     // Vérifier si l'URL est valide
-    final isValidUrl = imageUrl != null && 
-        imageUrl!.isNotEmpty && 
-        (imageUrl!.startsWith('http://') || imageUrl!.startsWith('https://')) &&
-        !imageUrl!.contains('via.placeholder.com'); // Exclure les placeholders qui ne fonctionnent pas
+    final isValidUrl = imageUrl != null &&
+      imageUrl!.isNotEmpty &&
+      (imageUrl!.startsWith('http://') || imageUrl!.startsWith('https://'));
     
     Widget imageWidget;
     
@@ -58,29 +57,39 @@ class OptimizedImage extends StatelessWidget {
         fadeOutDuration: const Duration(milliseconds: 200),
       );
     }
-    
-    if (borderRadius != null) {
-      return ClipRRect(
-        borderRadius: borderRadius!,
+
+    // Si des dimensions sont fournies, rendre avec SizedBox, sinon
+    // laisser l'image remplir l'espace parent (utile dans les AppBar flexibles)
+    Widget finalWidget;
+    final hasFixedSize = width != null || height != null;
+    if (hasFixedSize) {
+      finalWidget = SizedBox(width: width, height: height, child: imageWidget);
+    } else {
+      finalWidget = ConstrainedBox(
+        constraints: const BoxConstraints.expand(),
         child: imageWidget,
       );
     }
-    
-    return imageWidget;
+
+    if (borderRadius != null) {
+      return ClipRRect(
+        borderRadius: borderRadius!,
+        child: finalWidget,
+      );
+    }
+
+    return finalWidget;
   }
   
   Widget _buildPlaceholder(Color bgColor, Color icColor) {
-    // Calculer si on a assez d'espace pour le texte
+    // Si des dimensions fixes sont fournies, utiliser ces dimensions.
+    // Sinon, retourner un conteneur expansible pour remplir l'espace parent.
     final effectiveHeight = height ?? 100;
     final effectiveWidth = width ?? 100;
     final minDimension = (effectiveHeight < effectiveWidth ? effectiveHeight : effectiveWidth);
-    
-    // Adapter l'icône à la taille disponible
     final effectiveIconSize = (minDimension * 0.5).clamp(16.0, 48.0);
-    
-    return Container(
-      width: width,
-      height: height,
+
+    final content = Container(
       decoration: BoxDecoration(
         color: bgColor,
         gradient: LinearGradient(
@@ -100,12 +109,16 @@ class OptimizedImage extends StatelessWidget {
         ),
       ),
     );
+
+    if (width != null || height != null) {
+      return SizedBox(width: width, height: height, child: content);
+    }
+
+    return SizedBox.expand(child: content);
   }
   
   Widget _buildLoadingPlaceholder(Color bgColor, Color icColor) {
-    return Container(
-      width: width,
-      height: height,
+    final content = Container(
       color: bgColor,
       child: Center(
         child: SizedBox(
@@ -118,6 +131,12 @@ class OptimizedImage extends StatelessWidget {
         ),
       ),
     );
+
+    if (width != null || height != null) {
+      return SizedBox(width: width, height: height, child: content);
+    }
+
+    return SizedBox.expand(child: content);
   }
 }
 

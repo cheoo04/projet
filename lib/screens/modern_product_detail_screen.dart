@@ -252,8 +252,10 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
   
   /// App Bar avec galerie d'images
   Widget _buildAppBar(BuildContext context, bool isDark, List<String> images) {
+    final expandedHeight = (MediaQuery.of(context).size.height * 0.45).clamp(260.0, 400.0) as double;
+
     return SliverAppBar(
-      expandedHeight: 400,
+      expandedHeight: expandedHeight,
       pinned: true,
       backgroundColor: isDark ? AppTheme.secondaryVioletDark : Colors.white,
       leading: IconButton(
