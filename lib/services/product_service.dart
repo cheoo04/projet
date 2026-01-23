@@ -46,6 +46,27 @@ class ProductService {
         );
   }
 
+  /// Stream pour un produit spécifique (utile pour l'écran détail)
+  Stream<Product> getProductStream(String productId) {
+    return _col.doc(productId).snapshots().map((doc) {
+      final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) {
+        // Si le document est supprimé, retourner un produit vide minimal
+        return Product(
+          id: productId,
+          name: '',
+          category: '',
+          brand: '',
+          price: 0.0,
+          description: '',
+          imageUrls: [],
+          isInStock: false,
+        );
+      }
+      return Product.fromMap(data, doc.id);
+    });
+  }
+
   /// Obtenir les produits avec pagination (optimisé pour performances)
   Stream<List<Product>> getProductsPaginated({
     int limit = 20,

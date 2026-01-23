@@ -128,20 +128,37 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       }
     }
 
-    final prod = Product(
-      id: id,
-      name: name,
-      brand: brand,
-      category: category,
-      price: price,
-      description: description,
-      imageUrls: List.from(_imageUrls),
-      isInStock: stock > 0,
-      stock: stock,
-      supplierReference: supplierRef,
-      specs: specs,
-      createdAt: _createdAt,
-    );
+    // Construire l'objet produit en préservant les champs existants si
+    // nous sommes en mode édition (utiliser copyWith pour ne pas écraser
+    // les données enrichies non modifiées).
+    final prod = widget.product == null
+        ? Product(
+            id: id,
+            name: name,
+            brand: brand,
+            category: category,
+            price: price,
+            description: description,
+            imageUrls: List.from(_imageUrls),
+            isInStock: stock > 0,
+            stock: stock,
+            supplierReference: supplierRef,
+            specs: specs,
+            createdAt: _createdAt,
+          )
+        : widget.product!.copyWith(
+            name: name,
+            brand: brand,
+            category: category,
+            price: price,
+            description: description,
+            imageUrls: List.from(_imageUrls),
+            isInStock: stock > 0,
+            stock: stock,
+            supplierReference: supplierRef,
+            specs: specs,
+            createdAt: _createdAt,
+          );
 
     try {
       if (widget.product == null) {

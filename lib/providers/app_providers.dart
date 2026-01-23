@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
@@ -8,6 +9,9 @@ import '../services/product_service.dart';
 /// Provider optimisé pour la gestion des produits
 class ProductProvider extends ChangeNotifier {
   final ProductService _productService = ProductService();
+
+  StreamSubscription<List<Product>>? _productsSub;
+  final bool _realtimeEnabled = true; // enable real-time updates from Firestore
 
   List<Product> _products = [];
   List<Product> _filteredProducts = [];
@@ -29,6 +33,12 @@ class ProductProvider extends ChangeNotifier {
   String get searchQuery => _searchQuery;
   String get selectedCategory => _selectedCategory;
 
+  ProductProvider() {
+    if (_realtimeEnabled) {
+      _subscribeRealtime();
+    }
+  }
+
   /// Notifie les listeners en dehors de la phase de build pour éviter
   /// l'exception "setState() called during build".
   void _notifySafely() {
@@ -44,6 +54,8 @@ class ProductProvider extends ChangeNotifier {
 
   /// Charger les produits initiaux
   Future<void> loadProducts({bool refresh = false}) async {
+    // If realtime listener is enabled, skip manual loading to avoid duplication
+    if (_productsSub != null) return;
     if (_isLoading) return;
 
     if (refresh) {
@@ -88,6 +100,21 @@ class ProductProvider extends ChangeNotifier {
       _isLoading = false;
       _notifySafely();
     }
+  }
+
+  /// Démarrer l'écoute temps réel des produits (Firestore snapshots)
+  void _subscribeRealtime() {
+    // Déjà abonné ? annuler
+    _productsSub?.cancel();
+    _productsSub = _productService.getAll().listen((list) {
+      _products = list;
+      // When using realtime stream we don't use pagination
+      _lastDocument = null;
+      _hasMore = false;
+      _applyFilters();
+    }, onError: (err) {
+      debugPrint('Erreur realtime produits: $err');
+    });
   }
 
   /// Charger plus de produits (pagination)
@@ -195,6 +222,12 @@ class ProductProvider extends ChangeNotifier {
     _searchQuery = '';
     _selectedCategory = 'all';
     _applyFilters();
+  }
+
+  @override
+  void dispose() {
+    _productsSub?.cancel();
+    super.dispose();
   }
 
   /// Effacer l'erreur

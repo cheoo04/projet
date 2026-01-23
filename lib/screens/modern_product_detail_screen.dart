@@ -46,11 +46,13 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
   // Avis réels depuis Firestore
   List<Review> _reviews = [];
   bool _isLoadingReviews = false;
+  StreamSubscription<Product>? _productSub;
   
   @override
   void initState() {
     super.initState();
     _loadProduct();
+    _subscribeToProductStream();
   }
   
   /// Charger le produit depuis Firestore
@@ -116,6 +118,22 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
         setState(() => _isLoadingReviews = false);
       }
     }
+  }
+
+  void _subscribeToProductStream() {
+    // Cancel existing
+    _productSub?.cancel();
+    _productSub = ProductService()
+        .getProductStream(widget.productId)
+        .listen((updatedProduct) {
+      if (!mounted) return;
+      setState(() {
+        // Merge critical runtime fields if necessary
+        _product = updatedProduct;
+      });
+    }, onError: (err) {
+      debugPrint('Erreur stream produit: $err');
+    });
   }
   
   /// Basculer l'état favori
@@ -344,6 +362,12 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _productSub?.cancel();
+    super.dispose();
   }
   
   /// Informations principales du produit
