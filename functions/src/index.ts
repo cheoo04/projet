@@ -304,3 +304,71 @@ export const sendTopicNotification = functions
       throw new functions.https.HttpsError("internal", String(error));
     }
   });
+
+/**
+ * Cloud Function pour générer une signature Cloudinary côté serveur
+ * L'apiSecret ne quitte jamais le serveur — Flutter reçoit uniquement la signature
+ * 
+ * Déploiement de l'apiSecret :
+ *   firebase functions:secrets:set CLOUDINARY_API_SECRET
+ *   (puis entrer la valeur quand demandé)
+ */
+export const getCloudinarySignature = functions
+  .region("europe-west1")
+  .runWith({ secrets: ["CLOUDINARY_API_SECRET"] })
+  .https.onCall(async (data, context) => {
+    // Vérifier que l'utilisateur est connecté
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "Authentification requise pour uploader une image"
+      );
+    }
+
+    // Vérifier que l'utilisateur est admin ou manager
+    const userDoc = await db.collection("users").doc(context.auth.uid).get();
+    const userRole = userDoc.data()?.role;
+
+    if (!["admin", "manager"].includes(userRole)) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "Seuls les admins peuvent uploader des images"
+      );
+    }
+
+    const { paramsToSign } = data as { paramsToSign: Record<string, string> };
+
+    if (!paramsToSign || typeof paramsToSign !== "object") {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "paramsToSign est requis"
+      );
+    }
+
+    // Récupérer l'apiSecret depuis les secrets Firebase (jamais exposé au client)
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    if (!apiSecret) {
+      throw new functions.https.HttpsError(
+        "internal",
+        "CLOUDINARY_API_SECRET non configuré"
+      );
+    }
+
+    // Générer la signature (même algorithme SHA-1 qu'avant, mais côté serveur)
+    const crypto = require("crypto");
+    const sortedKeys = Object.keys(paramsToSign).sort();
+    const stringToSign = sortedKeys
+      .map((key) => `${key}=${paramsToSign[key]}`)
+      .join("&");
+    const signatureString = `${stringToSign}${apiSecret}`;
+    const signature = crypto
+      .createHash("sha1")
+      .update(signatureString)
+      .digest("hex");
+
+    functions.logger.info(
+      `✅ Signature Cloudinary générée pour user ${context.auth.uid}`
+    );
+
+    return { signature };
+  });
