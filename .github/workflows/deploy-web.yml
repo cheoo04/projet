@@ -46,6 +46,10 @@ jobs:
       - name: 📦 Get dependencies
         run: flutter pub get
 
+      - name: 🗺️ Generate sitemap with products
+        run: dart run scripts/generate_sitemap_products.dart
+        continue-on-error: true
+
       - name: 🔍 Analyze code
         run: flutter analyze --no-fatal-infos
         continue-on-error: true
