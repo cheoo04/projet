@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../modern_admin_navigation.dart';
+import '../admin_screens_loader.dart';
 import '../../services/auth_service.dart';
 import '../../models/app_user.dart';
 
@@ -49,7 +49,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const ModernAdminNavigation(),
+                      builder: (context) => const DeferredAdminNavigation(),
                     ),
                   );
                   break;
@@ -461,7 +461,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   void _navigateToAdminPanel() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const ModernAdminNavigation()),
+      MaterialPageRoute(builder: (context) => const DeferredAdminNavigation()),
     );
   }
 }
