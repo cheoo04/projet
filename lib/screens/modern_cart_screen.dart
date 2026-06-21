@@ -22,6 +22,9 @@ class ModernCartScreen extends StatefulWidget {
 
 class _ModernCartScreenState extends State<ModernCartScreen> {
   double get _deliveryFee => 5000.0;
+
+  /// Numéro Wave pour le paiement — identique au numéro WhatsApp de commande.
+  static const String _waveNumber = '07 88 71 18 96';
   
   @override
   Widget build(BuildContext context) {
@@ -314,6 +317,25 @@ class _ModernCartScreenState extends State<ModernCartScreen> {
                 ),
               ],
             ),
+
+            const SizedBox(height: 12),
+
+            // Info paiement Wave (non-bloquant, purement informatif)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.payments_outlined,
+                  size: 16,
+                  color: theme.textTheme.bodySmall?.color,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Paiement accepté : Wave',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -394,6 +416,7 @@ class _ModernCartScreenState extends State<ModernCartScreen> {
     message += '🚚 *Livraison :* ${_deliveryFee.toStringAsFixed(0)} FCFA\n';
     message += '\n*TOTAL : ${total.toStringAsFixed(0)} FCFA*\n\n';
     message += '📍 *Adresse de livraison :* [À compléter]\n\n';
+    message += '💳 *Paiement Wave disponible après confirmation :* $_waveNumber\n\n';
     message += 'Merci !';
     
     final url = Uri.parse('https://wa.me/2250788711896?text=${Uri.encodeComponent(message)}');
