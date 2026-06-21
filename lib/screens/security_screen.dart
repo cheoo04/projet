@@ -14,7 +14,7 @@ class SecurityScreen extends StatefulWidget {
 class _SecurityScreenState extends State<SecurityScreen> {
   final AuthService _authService = AuthService();
   bool _isLoading = false;
-  
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -144,6 +144,80 @@ class _SecurityScreenState extends State<SecurityScreen> {
           ),
           
           const SizedBox(height: 24),
+          
+          // Section Sécurité avancée (2FA obligatoire pour admin/manager)
+          FutureBuilder<bool>(
+            future: _authService.isAdmin(),
+            builder: (context, snapshot) {
+              final isAdminOrManager = snapshot.data ?? false;
+              if (!hasPassword || !isAdminOrManager) {
+                return const SizedBox.shrink();
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sécurité avancée',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.success.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.mark_email_read_outlined,
+                            color: AppTheme.success),
+                      ),
+                      title: const Text('Double authentification par email'),
+                      subtitle: Text(
+                        'Activée automatiquement pour votre rôle. Un code vous '
+                        'sera demandé par email à chaque connexion.',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.success.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.check,
+                                size: 16, color: AppTheme.success),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Active',
+                              style: TextStyle(
+                                color: AppTheme.success,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              );
+            },
+          ),
           
           // Section Actions
           Text(

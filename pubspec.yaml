@@ -67,7 +67,6 @@ dependencies:
   # Cache et mode hors ligne
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-  sqflite: ^2.3.0
   # Optimisations performance
   cached_network_image: ^3.3.0
   # Connectivité réseau

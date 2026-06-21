@@ -219,6 +219,13 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
+    // Règles pour la collection two_factor_codes (codes de vérification 2FA)
+    // Aucun accès client direct : tout passe par les Cloud Functions
+    // sendTwoFactorCode / verifyTwoFactorCode (droits admin).
+    match /two_factor_codes/{userId} {
+      allow read, write: if false;
+    }
+    
     // Règles par défaut : tout refuser
     match /{document=**} {
       allow read, write: if false;

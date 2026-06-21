@@ -3,12 +3,22 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '/services/auth_service.dart';
 import '/models/app_user.dart';
 import '../auth/login_screen.dart';
+import '../auth/two_factor_verification_screen.dart';
 import '../visitor/visitor_home_screen.dart';
 import '../client/client_home_screen.dart';
-import '../modern_admin_navigation.dart';
+import '../admin_screens_loader.dart';
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  // uid de l'utilisateur dont la 2FA a déjà été validée pour cette session.
+  // Se réinitialise naturellement à chaque nouveau login (uid différent ou null).
+  String? _twoFactorPassedForUid;
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +37,8 @@ class AuthWrapper extends StatelessWidget {
           return const VisitorHomeScreen();
         }
 
+        final uid = snapshot.data!.uid;
+
         // Utilisateur connecté - rediriger selon le rôle
         return FutureBuilder<UserRole>(
           future: AuthService().getCurrentUserRole(),
@@ -39,19 +51,46 @@ class AuthWrapper extends StatelessWidget {
 
             final role = roleSnapshot.data ?? UserRole.client;
 
-            switch (role) {
-              case UserRole.admin:
-              case UserRole.manager:
-                return const ModernAdminNavigation();
-              case UserRole.client:
-                return const ClientHomeScreen();
-              default:
-                return const VisitorHomeScreen();
+            // La 2FA ne concerne que les connexions email/mot de passe.
+            // Google Sign-In a déjà sa propre protection OAuth, et les comptes
+            // anonymes n'ont pas d'email vers lequel envoyer un code.
+            final isPasswordLogin = snapshot.data!.providerData
+                .any((p) => p.providerId == 'password');
+
+            // 2FA obligatoire pour admin et manager (accès aux données sensibles
+            // : stock, commandes, promotions). Pas de 2FA pour les clients :
+            // beaucoup n'ont pas un usage régulier de leur email, ce qui les
+            // bloquerait inutilement pour un niveau de risque bien plus faible.
+            final requiresTwoFactor =
+                role == UserRole.admin || role == UserRole.manager;
+
+            if (isPasswordLogin &&
+                requiresTwoFactor &&
+                _twoFactorPassedForUid != uid) {
+              return TwoFactorVerificationScreen(
+                onVerified: () {
+                  setState(() => _twoFactorPassedForUid = uid);
+                },
+              );
             }
+
+            return _routeForRole(role);
           },
         );
       },
     );
+  }
+
+  Widget _routeForRole(UserRole role) {
+    switch (role) {
+      case UserRole.admin:
+      case UserRole.manager:
+        return const DeferredAdminNavigation();
+      case UserRole.client:
+        return const ClientHomeScreen();
+      default:
+        return const VisitorHomeScreen();
+    }
   }
 }
 

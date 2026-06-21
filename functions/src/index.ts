@@ -372,3 +372,154 @@ export const getCloudinarySignature = functions
 
     return { signature };
   });
+/**
+ * Cloud Function callable : génère un code de vérification à 6 chiffres,
+ * le stocke temporairement (10 min) dans Firestore, et l'envoie par email
+ * via l'API Brevo. Utilisée pour la 2FA optionnelle au login email/mot de passe.
+ */
+export const sendTwoFactorCode = functions
+  .region("europe-west1")
+  .runWith({ secrets: ["BREVO_API_KEY"] })
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "Authentification requise"
+      );
+    }
+
+    const uid = context.auth.uid;
+    const userDoc = await db.collection("users").doc(uid).get();
+    const userRole = userDoc.data()?.role;
+
+    if (!["admin", "manager"].includes(userRole)) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "La double authentification n'est requise que pour les comptes admin/manager"
+      );
+    }
+
+    const email = userDoc.data()?.email;
+
+    if (!email) {
+      throw new functions.https.HttpsError(
+        "failed-precondition",
+        "Aucun email associé à ce compte"
+      );
+    }
+
+    const crypto = require("crypto");
+    const code = crypto.randomInt(100000, 999999).toString();
+    const now = admin.firestore.Timestamp.now();
+    const expiresAt = admin.firestore.Timestamp.fromMillis(
+      now.toMillis() + 10 * 60 * 1000
+    );
+
+    await db.collection("two_factor_codes").doc(uid).set({
+      code,
+      createdAt: now,
+      expiresAt,
+      attempts: 0,
+    });
+
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) {
+      throw new functions.https.HttpsError(
+        "internal",
+        "BREVO_API_KEY non configuré"
+      );
+    }
+
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": apiKey,
+      },
+      body: JSON.stringify({
+        sender: { name: "Pharrell Phone", email: "no-reply@pharrellphone.com" },
+        to: [{ email }],
+        subject: "Votre code de vérification Pharrell Phone",
+        htmlContent: `<p>Votre code de vérification est : <strong>${code}</strong></p>
+          <p>Ce code expire dans 10 minutes. Si vous n'êtes pas à l'origine de
+          cette connexion, ignorez cet email.</p>`,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      functions.logger.error(`Erreur envoi Brevo: ${errText}`);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Échec de l'envoi de l'email"
+      );
+    }
+
+    functions.logger.info(`✅ Code 2FA envoyé à ${email}`);
+    return { success: true };
+  });
+
+/**
+ * Cloud Function callable : vérifie le code de vérification 2FA saisi par
+ * l'utilisateur contre celui stocké dans Firestore par sendTwoFactorCode.
+ */
+export const verifyTwoFactorCode = functions
+  .region("europe-west1")
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "Authentification requise"
+      );
+    }
+
+    const { code } = data as { code: string };
+    if (!code || typeof code !== "string") {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Code requis"
+      );
+    }
+
+    const uid = context.auth.uid;
+    const userDoc = await db.collection("users").doc(uid).get();
+    const userRole = userDoc.data()?.role;
+
+    if (!["admin", "manager"].includes(userRole)) {
+      throw new functions.https.HttpsError(
+        "permission-denied",
+        "La double authentification n'est requise que pour les comptes admin/manager"
+      );
+    }
+
+    const docRef = db.collection("two_factor_codes").doc(uid);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      return { success: false, reason: "expired" };
+    }
+
+    const { code: storedCode, expiresAt, attempts } = doc.data() as {
+      code: string;
+      expiresAt: admin.firestore.Timestamp;
+      attempts: number;
+    };
+
+    if (admin.firestore.Timestamp.now().toMillis() > expiresAt.toMillis()) {
+      await docRef.delete();
+      return { success: false, reason: "expired" };
+    }
+
+    if (attempts >= 5) {
+      return { success: false, reason: "too_many_attempts" };
+    }
+
+    if (code !== storedCode) {
+      await docRef.update({ attempts: attempts + 1 });
+      return { success: false, reason: "invalid_code" };
+    }
+
+    await docRef.delete();
+    functions.logger.info(`✅ 2FA vérifiée pour ${uid}`);
+    return { success: true };
+  });
