@@ -76,6 +76,15 @@ class OrderService {
       if (order.updatedAt != null) {
         data['updatedAt'] = Timestamp.fromDate(order.updatedAt!);
       }
+      // Idem pour les timestamps imbriqués de l'historique des statuts
+      data['statusHistory'] = order.statusHistory
+          .map(
+            (entry) => {
+              'status': entry.status.name,
+              'timestamp': Timestamp.fromDate(entry.timestamp),
+            },
+          )
+          .toList();
       await _firestore.collection(_collection).doc(order.id).set(data);
     } catch (e) {
       throw Exception('Erreur lors de l\'ajout de la commande: $e');
@@ -95,12 +104,16 @@ class OrderService {
     }
   }
 
-  // Mettre à jour le statut d'une commande
+  // Mettre à jour le statut d'une commande (et l'ajouter à l'historique)
   Future<void> updateStatus(String orderId, OrderStatus newStatus) async {
     try {
+      final now = Timestamp.now();
       await _firestore.collection(_collection).doc(orderId).update({
         'status': newStatus.name,
-        'updatedAt': Timestamp.now(),
+        'updatedAt': now,
+        'statusHistory': FieldValue.arrayUnion([
+          {'status': newStatus.name, 'timestamp': now},
+        ]),
       });
     } catch (e) {
       throw Exception('Erreur lors de la mise à jour du statut: $e');
@@ -167,6 +180,23 @@ class OrderService {
           (snapshot) => snapshot.docs
               .map((doc) => Order.fromMap(doc.data(), doc.id))
               .toList(),
+        );
+  }
+
+  // Stream des commandes d'un client précis (pour "Mes Commandes" côté client).
+  // Tri côté client (pas de orderBy) pour éviter d'exiger un index composite
+  // Firestore sur (userId, createdAt).
+  Stream<List<Order>> streamOrdersForUser(String userId) {
+    return _firestore
+        .collection(_collection)
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => Order.fromMap(doc.data(), doc.id))
+                  .toList()
+                ..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
         );
   }
 

@@ -34,8 +34,41 @@ class OrderItem {
   }
 }
 
+class OrderStatusEntry {
+  final OrderStatus status;
+  final DateTime timestamp;
+
+  OrderStatusEntry({required this.status, required this.timestamp});
+
+  factory OrderStatusEntry.fromMap(Map<String, dynamic> map) {
+    DateTime parseDate(dynamic value) {
+      if (value is Timestamp) return value.toDate();
+      if (value is DateTime) return value;
+      if (value is String) {
+        try {
+          return DateTime.parse(value);
+        } catch (_) {}
+      }
+      return DateTime.now();
+    }
+
+    return OrderStatusEntry(
+      status: OrderStatus.values.firstWhere(
+        (s) => s.name == (map['status'] as String?),
+        orElse: () => OrderStatus.pending,
+      ),
+      timestamp: parseDate(map['timestamp']),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {'status': status.name, 'timestamp': timestamp};
+  }
+}
+
 class Order {
   final String id;
+  final String userId;
   final String customerName;
   final String customerEmail;
   final String customerPhone;
@@ -46,9 +79,11 @@ class Order {
   final DateTime createdAt;
   final DateTime? updatedAt;
   final String? notes;
+  final List<OrderStatusEntry> statusHistory;
 
   Order({
     required this.id,
+    required this.userId,
     required this.customerName,
     required this.customerEmail,
     required this.customerPhone,
@@ -58,6 +93,7 @@ class Order {
     required this.createdAt,
     this.updatedAt,
     this.notes,
+    this.statusHistory = const [],
   }) : totalAmount = items.fold(0, (somme, item) => somme + item.totalPrice);
 
   factory Order.fromMap(Map<String, dynamic> map, String docId) {
@@ -76,6 +112,7 @@ class Order {
 
     return Order(
       id: docId,
+      userId: map['userId'] as String? ?? '',
       customerName: map['customerName'] as String? ?? '',
       customerEmail: map['customerEmail'] as String? ?? '',
       customerPhone: map['customerPhone'] as String? ?? '',
@@ -92,11 +129,20 @@ class Order {
       createdAt: parseDate(map['createdAt']),
       updatedAt: map['updatedAt'] != null ? parseDate(map['updatedAt']) : null,
       notes: map['notes'] as String?,
+      statusHistory:
+          (map['statusHistory'] as List<dynamic>?)
+              ?.map(
+                (entry) =>
+                    OrderStatusEntry.fromMap(entry as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'userId': userId,
       'customerName': customerName,
       'customerEmail': customerEmail,
       'customerPhone': customerPhone,
@@ -108,10 +154,12 @@ class Order {
       'createdAt': createdAt,
       'updatedAt': updatedAt,
       'notes': notes,
+      'statusHistory': statusHistory.map((entry) => entry.toMap()).toList(),
     };
   }
 
   Order copyWith({
+    String? userId,
     String? customerName,
     String? customerEmail,
     String? customerPhone,
@@ -120,9 +168,11 @@ class Order {
     OrderStatus? status,
     DateTime? updatedAt,
     String? notes,
+    List<OrderStatusEntry>? statusHistory,
   }) {
     return Order(
       id: id,
+      userId: userId ?? this.userId,
       customerName: customerName ?? this.customerName,
       customerEmail: customerEmail ?? this.customerEmail,
       customerPhone: customerPhone ?? this.customerPhone,
@@ -132,6 +182,7 @@ class Order {
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       notes: notes ?? this.notes,
+      statusHistory: statusHistory ?? this.statusHistory,
     );
   }
 }

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/app_theme.dart';
+import '../models/order.dart' as order_model;
+import '../services/order_service.dart';
 import '../widgets/ui_components.dart';
 import '../widgets/custom_snackbar.dart';
 import '../widgets/styled_dialogs.dart';
@@ -385,6 +388,44 @@ class _ModernCartScreenState extends State<ModernCartScreen> {
         AppNavigator.push(context, AppNavigator.authRoute);
       }
       return;
+    }
+
+    // Créer la commande dans Firestore (pour le suivi côté client dans
+    // "Mes Commandes"). Ne bloque jamais l'envoi WhatsApp si ça échoue :
+    // WhatsApp reste le canal principal de la commande aujourd'hui.
+    try {
+      final now = DateTime.now();
+      final orderRef = FirebaseFirestore.instance.collection('orders').doc();
+      final order = order_model.Order(
+        id: orderRef.id,
+        userId: user.uid,
+        customerName: user.displayName ?? '',
+        customerEmail: user.email ?? '',
+        customerPhone: user.phoneNumber ?? '',
+        deliveryAddress: '[À compléter]',
+        items: cartItems
+            .where((item) => item != null)
+            .map(
+              (item) => order_model.OrderItem(
+                productId: item!['product'].id as String,
+                productName: item['product'].name as String,
+                unitPrice: (item['product'].price as num).toDouble(),
+                quantity: item['quantity'] as int,
+              ),
+            )
+            .toList(),
+        status: order_model.OrderStatus.pending,
+        createdAt: now,
+        statusHistory: [
+          order_model.OrderStatusEntry(
+            status: order_model.OrderStatus.pending,
+            timestamp: now,
+          ),
+        ],
+      );
+      await OrderService().add(order);
+    } catch (e) {
+      debugPrint('Erreur lors de la création de la commande Firestore: $e');
     }
     
     // Construire le message

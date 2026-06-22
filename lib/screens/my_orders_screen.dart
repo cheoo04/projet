@@ -1,7 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../config/app_theme.dart';
+import '../models/order.dart';
+import '../services/order_service.dart';
+
+/// Étapes linéaires de progression d'une commande. "cancelled" est un état
+/// à part, affiché différemment (pas dans la timeline linéaire).
+const List<OrderStatus> _linearStages = [
+  OrderStatus.pending,
+  OrderStatus.confirmed,
+  OrderStatus.preparing,
+  OrderStatus.shipped,
+  OrderStatus.delivered,
+];
 
 /// Écran Mes Commandes
 class MyOrdersScreen extends StatefulWidget {
@@ -12,33 +23,26 @@ class MyOrdersScreen extends StatefulWidget {
 }
 
 class _MyOrdersScreenState extends State<MyOrdersScreen> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+  final OrderService _orderService = OrderService();
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mes Commandes'),
-      ),
+      appBar: AppBar(title: const Text('Mes Commandes')),
       body: user == null
           ? _buildNotLoggedIn(context)
-          : _buildOrdersList(context, user.uid, isDark),
+          : _buildOrdersList(context, user.uid),
     );
   }
-  
+
   Widget _buildNotLoggedIn(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.lock_outline,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.lock_outline, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           const Text('Connectez-vous pour voir vos commandes'),
           const SizedBox(height: 16),
@@ -50,24 +54,25 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       ),
     );
   }
-  
-  Widget _buildOrdersList(BuildContext context, String userId, bool isDark) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _firestore
-          .collection('orders')
-          .where('userId', isEqualTo: userId)
-          .snapshots(),
+
+  Widget _buildOrdersList(BuildContext context, String userId) {
+    return StreamBuilder<List<Order>>(
+      stream: _orderService.streamOrdersForUser(userId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        
+
         if (snapshot.hasError) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
                 const SizedBox(height: 16),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -81,43 +86,23 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
             ),
           );
         }
-        
-        var orders = snapshot.data?.docs ?? [];
-        
+
+        final orders = snapshot.data ?? [];
+
         if (orders.isEmpty) {
           return _buildEmptyOrders(context);
         }
-        
-        // Trier les commandes par date côté client (évite l'index composite)
-        orders.sort((a, b) {
-          final aData = a.data() as Map<String, dynamic>;
-          final bData = b.data() as Map<String, dynamic>;
-          final aDate = _parseDate(aData['createdAt']);
-          final bDate = _parseDate(bData['createdAt']);
-          return bDate.compareTo(aDate); // Descending
-        });
-        
+
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: orders.length,
-          itemBuilder: (context, index) {
-            final order = orders[index].data() as Map<String, dynamic>;
-            return _buildOrderCard(context, orders[index].id, order, isDark);
-          },
+          itemBuilder: (context, index) =>
+              _buildOrderCard(context, orders[index]),
         );
       },
     );
   }
-  
-  /// Parse une date depuis différents formats possibles
-  DateTime _parseDate(dynamic value) {
-    if (value == null) return DateTime.now();
-    if (value is Timestamp) return value.toDate();
-    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
-    if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
-    return DateTime.now();
-  }
-  
+
   Widget _buildEmptyOrders(BuildContext context) {
     return Center(
       child: Column(
@@ -131,9 +116,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           const SizedBox(height: 24),
           Text(
             'Aucune commande',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: Colors.grey.shade600,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
@@ -148,61 +133,49 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryViolet,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24,
+                vertical: 12,
+              ),
             ),
           ),
         ],
       ),
     );
   }
-  
-  Widget _buildOrderCard(BuildContext context, String orderId, Map<String, dynamic> order, bool isDark) {
-    final status = order['status'] ?? 'pending';
-    final total = (order['total'] ?? 0).toDouble();
-    final createdAt = _parseDate(order['createdAt']);
-    final items = order['items'] as List<dynamic>? ?? [];
-    
-    Color statusColor;
-    String statusText;
-    IconData statusIcon;
-    
+
+  /// Couleur + icône associées à un statut — seule source de vérité,
+  /// utilisée à la fois pour le badge de la liste et pour la timeline.
+  /// Le switch est exhaustif sur l'enum : si un statut est ajouté un jour,
+  /// l'analyseur Dart signale immédiatement qu'il manque un cas ici.
+  ({Color color, IconData icon}) _statusVisual(OrderStatus status) {
     switch (status) {
-      case 'pending':
-        statusColor = AppTheme.warning;
-        statusText = 'En attente';
-        statusIcon = Icons.hourglass_empty;
-        break;
-      case 'confirmed':
-        statusColor = AppTheme.info;
-        statusText = 'Confirmée';
-        statusIcon = Icons.check_circle_outline;
-        break;
-      case 'shipped':
-        statusColor = AppTheme.primaryViolet;
-        statusText = 'Expédiée';
-        statusIcon = Icons.local_shipping;
-        break;
-      case 'delivered':
-        statusColor = AppTheme.success;
-        statusText = 'Livrée';
-        statusIcon = Icons.done_all;
-        break;
-      case 'cancelled':
-        statusColor = AppTheme.error;
-        statusText = 'Annulée';
-        statusIcon = Icons.cancel_outlined;
-        break;
-      default:
-        statusColor = Colors.grey;
-        statusText = status;
-        statusIcon = Icons.help_outline;
+      case OrderStatus.pending:
+        return (color: AppTheme.warning, icon: Icons.hourglass_empty);
+      case OrderStatus.confirmed:
+        return (color: AppTheme.info, icon: Icons.check_circle_outline);
+      case OrderStatus.preparing:
+        return (
+          color: AppTheme.accentVioletLight,
+          icon: Icons.inventory_2_outlined,
+        );
+      case OrderStatus.shipped:
+        return (color: AppTheme.primaryViolet, icon: Icons.local_shipping);
+      case OrderStatus.delivered:
+        return (color: AppTheme.success, icon: Icons.done_all);
+      case OrderStatus.cancelled:
+        return (color: AppTheme.error, icon: Icons.cancel_outlined);
     }
-    
+  }
+
+  Widget _buildOrderCard(BuildContext context, Order order) {
+    final visual = _statusVisual(order.status);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        onTap: () => _showOrderDetails(context, orderId, order),
+        onTap: () => _showOrderDetails(context, order),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -214,27 +187,30 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Commande #${orderId.substring(0, 8)}',
+                    'Commande #${order.id.substring(0, 8)}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: visual.color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(statusIcon, size: 16, color: statusColor),
+                        Icon(visual.icon, size: 16, color: visual.color),
                         const SizedBox(width: 4),
                         Text(
-                          statusText,
+                          order.status.displayName,
                           style: TextStyle(
-                            color: statusColor,
+                            color: visual.color,
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
                           ),
@@ -245,32 +221,29 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // Date
               Text(
-                _formatDate(createdAt),
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 13,
-                ),
+                _formatDate(order.createdAt),
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
               ),
               const SizedBox(height: 8),
-              
+
               // Items count
               Text(
-                '${items.length} article${items.length > 1 ? 's' : ''}',
+                '${order.items.length} article${order.items.length > 1 ? 's' : ''}',
                 style: TextStyle(color: Colors.grey.shade600),
               ),
-              
+
               const Divider(height: 24),
-              
+
               // Total
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Total'),
                   Text(
-                    '${total.toStringAsFixed(0)} FCFA',
+                    '${order.totalAmount.toStringAsFixed(0)} FCFA',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 18,
@@ -285,32 +258,172 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       ),
     );
   }
-  
+
   String _formatDate(DateTime date) {
     final months = [
-      'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
-      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+      'janvier',
+      'février',
+      'mars',
+      'avril',
+      'mai',
+      'juin',
+      'juillet',
+      'août',
+      'septembre',
+      'octobre',
+      'novembre',
+      'décembre',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year} à ${date.hour}h${date.minute.toString().padLeft(2, '0')}';
   }
-  
-  void _showOrderDetails(BuildContext context, String orderId, Map<String, dynamic> order) {
-    final items = order['items'] as List<dynamic>? ?? [];
-    final total = (order['total'] ?? 0).toDouble();
-    final status = order['status'] ?? 'pending';
-    
+
+  /// Timeline de progression — version simple : statut actuel mis en
+  /// évidence, et une date par étape déjà franchie (lue depuis
+  /// `statusHistory`). Les commandes annulées affichent un encart à part.
+  Widget _buildStatusTimeline(Order order) {
+    if (order.status == OrderStatus.cancelled) {
+      final visual = _statusVisual(OrderStatus.cancelled);
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: visual.color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(visual.icon, color: visual.color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Cette commande a été annulée.',
+                style: TextStyle(
+                  color: visual.color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final currentIndex = _linearStages.indexOf(order.status);
+    final safeIndex = currentIndex == -1 ? 0 : currentIndex;
+
+    final historyDates = <OrderStatus, DateTime>{};
+    for (final entry in order.statusHistory) {
+      historyDates[entry.status] = entry.timestamp;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (int i = 0; i < _linearStages.length; i++)
+          _buildTimelineStep(
+            stage: _linearStages[i],
+            isReached: i <= safeIndex,
+            isCurrent: i == safeIndex,
+            lineColored: i < safeIndex,
+            isLast: i == _linearStages.length - 1,
+            date: historyDates[_linearStages[i]],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTimelineStep({
+    required OrderStatus stage,
+    required bool isReached,
+    required bool isCurrent,
+    required bool lineColored,
+    required bool isLast,
+    DateTime? date,
+  }) {
+    final visual = _statusVisual(stage);
+    final borderColor = isReached ? visual.color : Colors.grey.shade300;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isReached
+                    ? visual.color.withOpacity(0.15)
+                    : Colors.grey.shade100,
+                border: Border.all(color: borderColor, width: 2),
+              ),
+              child: Icon(
+                visual.icon,
+                size: 16,
+                color: isReached ? visual.color : Colors.grey.shade400,
+              ),
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 32,
+                color: lineColored ? visual.color : Colors.grey.shade300,
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 20, top: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  stage.displayName,
+                  style: TextStyle(
+                    fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                    color: isReached ? Colors.black87 : Colors.grey.shade400,
+                  ),
+                ),
+                if (date != null)
+                  Text(
+                    _formatDate(date),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  )
+                else if (isCurrent)
+                  Text(
+                    'En cours',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showOrderDetails(BuildContext context, Order order) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
+        initialChildSize: 0.75,
         minChildSize: 0.5,
         maxChildSize: 0.95,
         builder: (context, scrollController) => Container(
           decoration: BoxDecoration(
             color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24),
+            ),
           ),
           child: Column(
             children: [
@@ -324,16 +437,19 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              
+
               // Title
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const Icon(Icons.receipt_long, color: AppTheme.primaryViolet),
+                    const Icon(
+                      Icons.receipt_long,
+                      color: AppTheme.primaryViolet,
+                    ),
                     const SizedBox(width: 12),
                     Text(
-                      'Commande #${orderId.substring(0, 8)}',
+                      'Commande #${order.id.substring(0, 8)}',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -341,17 +457,25 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   ],
                 ),
               ),
-              
+
               const Divider(),
-              
+
+              // Timeline de progression
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: _buildStatusTimeline(order),
+              ),
+
+              const Divider(),
+
               // Items
               Expanded(
                 child: ListView.builder(
                   controller: scrollController,
                   padding: const EdgeInsets.all(16),
-                  itemCount: items.length + 1,
+                  itemCount: order.items.length + 1,
                   itemBuilder: (context, index) {
-                    if (index == items.length) {
+                    if (index == order.items.length) {
                       // Total row
                       return Padding(
                         padding: const EdgeInsets.only(top: 16),
@@ -366,7 +490,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                               ),
                             ),
                             Text(
-                              '${total.toStringAsFixed(0)} FCFA',
+                              '${order.totalAmount.toStringAsFixed(0)} FCFA',
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -377,8 +501,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                         ),
                       );
                     }
-                    
-                    final item = items[index] as Map<String, dynamic>;
+
+                    final item = order.items[index];
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
@@ -389,12 +513,15 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                             color: AppTheme.primaryViolet.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.smartphone, color: AppTheme.primaryViolet),
+                          child: const Icon(
+                            Icons.smartphone,
+                            color: AppTheme.primaryViolet,
+                          ),
                         ),
-                        title: Text(item['name'] ?? 'Produit'),
-                        subtitle: Text('Quantité: ${item['quantity'] ?? 1}'),
+                        title: Text(item.productName),
+                        subtitle: Text('Quantité: ${item.quantity}'),
                         trailing: Text(
-                          '${((item['price'] ?? 0) * (item['quantity'] ?? 1)).toStringAsFixed(0)} FCFA',
+                          '${item.totalPrice.toStringAsFixed(0)} FCFA',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
