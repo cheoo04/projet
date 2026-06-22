@@ -323,3 +323,55 @@ class CartProvider extends ChangeNotifier {
   /// Obtenir la quantité d'un produit
   int getQuantity(String productId) => _items[productId] ?? 0;
 }
+
+enum ComparisonAddResult { added, alreadyFull, categoryMismatch }
+
+/// Provider pour la comparaison de produits. En mémoire uniquement (comme
+/// CartProvider) : se vide à la fermeture de l'app, pas de persistance.
+class ComparisonProvider extends ChangeNotifier {
+  static const int maxProducts = 3;
+
+  final List<String> _productIds = [];
+  String? _category;
+
+  List<String> get productIds => List.unmodifiable(_productIds);
+  String? get category => _category;
+  bool get isFull => _productIds.length >= maxProducts;
+  bool get isEmpty => _productIds.isEmpty;
+
+  bool contains(String productId) => _productIds.contains(productId);
+
+  /// Ajoute un produit à la comparaison. Refuse si la liste est pleine, ou
+  /// si la catégorie ne correspond pas à celle déjà en cours (sauf si la
+  /// liste est vide, auquel cas la catégorie est fixée par ce premier ajout).
+  ComparisonAddResult add(String productId, String category) {
+    if (_productIds.contains(productId)) {
+      return ComparisonAddResult.added; // déjà présent, no-op
+    }
+    if (isFull) {
+      return ComparisonAddResult.alreadyFull;
+    }
+    if (_category != null && _category != category) {
+      return ComparisonAddResult.categoryMismatch;
+    }
+
+    _productIds.add(productId);
+    _category = category;
+    notifyListeners();
+    return ComparisonAddResult.added;
+  }
+
+  void remove(String productId) {
+    _productIds.remove(productId);
+    if (_productIds.isEmpty) {
+      _category = null;
+    }
+    notifyListeners();
+  }
+
+  void clear() {
+    _productIds.clear();
+    _category = null;
+    notifyListeners();
+  }
+}

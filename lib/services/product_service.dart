@@ -111,7 +111,22 @@ class ProductService {
         .toList();
   }
 
-  /// Obtenir les produits avec stock faible
+  /// Récupère plusieurs produits par leurs IDs (utilisé par le comparateur).
+  /// Filtre silencieusement les IDs dont le produit n'existe plus (supprimé
+  /// entre-temps), plutôt que de faire échouer toute la requête.
+  Future<List<Product>> getByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+
+    final snapshot = await _col
+        .where(FieldPath.documentId, whereIn: ids)
+        .get();
+
+    return snapshot.docs
+        .map(
+          (doc) => Product.fromMap(doc.data() as Map<String, dynamic>, doc.id),
+        )
+        .toList();
+  }
   Future<List<Product>> getLowStockProducts({
     int threshold = defaultLowStockThreshold,
   }) async {

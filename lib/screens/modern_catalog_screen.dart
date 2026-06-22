@@ -9,6 +9,7 @@ import '../widgets/optimized_product_card.dart';
 import '../widgets/desktop_product_card.dart';
 import '../widgets/desktop_header.dart';
 import '../widgets/ui_components.dart';
+import '../widgets/comparison_banner.dart';
 import '../web_config/responsive_config.dart';
 import '../web_config/navigation_helper.dart';
 
@@ -161,24 +162,29 @@ class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
     return Scaffold(
       backgroundColor: isDark ? AppTheme.backgroundDark : AppTheme.backgroundLight,
       
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header : Desktop header ou header mobile
-            if (isDesktop)
-              const DesktopHeader()
-            else
-              _buildHeader(context, isDark),
-            
-            // Filtres catégories
-            _buildCategoryFilters(context),
-            
-            // Liste des produits
-            Expanded(
-              child: _buildProductGrid(context),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
+                // Header : Desktop header ou header mobile
+                if (isDesktop)
+                  const DesktopHeader()
+                else
+                  _buildHeader(context, isDark),
+                
+                // Filtres catégories
+                _buildCategoryFilters(context),
+                
+                // Liste des produits
+                Expanded(
+                  child: _buildProductGrid(context),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const ComparisonBanner(),
+        ],
       ),
     );
   }

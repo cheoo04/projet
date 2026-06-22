@@ -7,6 +7,7 @@ import '../screens/modern_home_screen.dart';
 import '../screens/modern_catalog_screen.dart';
 import '../screens/modern_product_detail_screen.dart';
 import '../screens/modern_cart_screen.dart';
+import '../screens/comparison_screen.dart';
 import '../screens/admin_screens_loader.dart'; // Chargement différé admin
 import '../screens/auth_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -119,6 +120,13 @@ class WebRouter {
           path: '/cart',
           name: 'cart',
           builder: (context, state) => const ModernCartScreen(),
+        ),
+        
+        // Comparateur de produits
+        GoRoute(
+          path: '/comparison',
+          name: 'comparison',
+          builder: (context, state) => const ComparisonScreen(),
         ),
         
         // Authentification

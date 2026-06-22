@@ -12,6 +12,7 @@ import '../widgets/trust_signal_card.dart';
 import '../widgets/variant_selector.dart';
 import '../widgets/similar_products_section.dart';
 import '../widgets/add_review_dialog.dart';
+import '../widgets/comparison_banner.dart';
 import '../widgets/responsive_scaffold.dart';
 import '../models/product.dart';
 import '../models/product_extensions.dart';
@@ -158,6 +159,57 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
       );
     }
   }
+
+  /// Ajouter ou retirer le produit de la comparaison
+  void _toggleComparison(BuildContext context) {
+    if (_product == null) return;
+
+    final comparison = context.read<ComparisonProvider>();
+    final product = _product!;
+
+    if (comparison.contains(product.id)) {
+      comparison.remove(product.id);
+      if (mounted) {
+        CustomSnackBar.show(
+          context,
+          message: '${product.name} retiré de la comparaison',
+          type: SnackBarType.info,
+        );
+      }
+      return;
+    }
+
+    final result = comparison.add(product.id, product.category);
+
+    if (!mounted) return;
+
+    switch (result) {
+      case ComparisonAddResult.alreadyFull:
+        CustomSnackBar.show(
+          context,
+          message:
+              'Maximum ${ComparisonProvider.maxProducts} produits en comparaison',
+          type: SnackBarType.error,
+        );
+        break;
+      case ComparisonAddResult.categoryMismatch:
+        CustomSnackBar.show(
+          context,
+          message:
+              "Vous comparez déjà des produits d'une autre catégorie. "
+              'Videz la comparaison pour changer.',
+          type: SnackBarType.error,
+        );
+        break;
+      case ComparisonAddResult.added:
+        CustomSnackBar.show(
+          context,
+          message: '${product.name} ajouté à la comparaison',
+          type: SnackBarType.success,
+        );
+        break;
+    }
+  }
   
   /// Partager le produit
   Future<void> _shareProduct() async {
@@ -206,62 +258,67 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
     
     return ResponsiveScaffold(
       showDesktopHeader: true,
-      body: CustomScrollView(
-        slivers: [
-          // App Bar avec image
-          _buildAppBar(context, isDark, images),
-          
-          // Contenu
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Informations principales
-                _buildProductInfo(context),
-                
-                // Sélecteur de variantes (couleur, stockage)
-                _buildVariantsSection(context),
-                
-                // Section Social Proof (rating + vendus)
-                _buildSocialProofSection(context),
-                
-                // Section Signaux de Confiance
-                _buildTrustSignalsSection(context),
-                
-                const Divider(height: 32),
-                
-                // Points forts
-                _buildHighlightsSection(context),
-                
-                // Description
-                _buildDescription(context),
-                
-                const Divider(height: 32),
-                
-                // Caractéristiques
-                _buildSpecifications(context),
-                
-                const Divider(height: 32),
-                
-                // Section Avis Clients
-                _buildReviewsSection(context),
-                
-                const Divider(height: 32),
-                
-                // Produits similaires
-                SimilarProductsSection(
-                  currentProductId: _product!.id,
-                  category: _product!.category,
-                  brand: _product!.brand,
-                  onProductTap: (productId) {
-                    AppNavigator.toProductDetail(context, productId);
-                  },
+      body: Stack(
+        children: [
+          CustomScrollView(
+            slivers: [
+              // App Bar avec image
+              _buildAppBar(context, isDark, images),
+              
+              // Contenu
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Informations principales
+                    _buildProductInfo(context),
+                    
+                    // Sélecteur de variantes (couleur, stockage)
+                    _buildVariantsSection(context),
+                    
+                    // Section Social Proof (rating + vendus)
+                    _buildSocialProofSection(context),
+                    
+                    // Section Signaux de Confiance
+                    _buildTrustSignalsSection(context),
+                    
+                    const Divider(height: 32),
+                    
+                    // Points forts
+                    _buildHighlightsSection(context),
+                    
+                    // Description
+                    _buildDescription(context),
+                    
+                    const Divider(height: 32),
+                    
+                    // Caractéristiques
+                    _buildSpecifications(context),
+                    
+                    const Divider(height: 32),
+                    
+                    // Section Avis Clients
+                    _buildReviewsSection(context),
+                    
+                    const Divider(height: 32),
+                    
+                    // Produits similaires
+                    SimilarProductsSection(
+                      currentProductId: _product!.id,
+                      category: _product!.category,
+                      brand: _product!.brand,
+                      onProductTap: (productId) {
+                        AppNavigator.toProductDetail(context, productId);
+                      },
+                    ),
+                    
+                    const SizedBox(height: 100), // Espace pour le bouton fixe
+                  ],
                 ),
-                
-                const SizedBox(height: 100), // Espace pour le bouton fixe
-              ],
-            ),
+              ),
+            ],
           ),
+          const ComparisonBanner(),
         ],
       ),
       
@@ -306,6 +363,31 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
             ),
           ),
           onPressed: _toggleFavorite,
+        ),
+        // Bouton Comparer
+        Builder(
+          builder: (context) {
+            final comparison = context.watch<ComparisonProvider>();
+            final isInComparison =
+                _product != null && comparison.contains(_product!.id);
+
+            return IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isInComparison
+                      ? AppTheme.primaryViolet.withOpacity(0.8)
+                      : Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.compare_arrows,
+                  color: Colors.white,
+                ),
+              ),
+              onPressed: () => _toggleComparison(context),
+            );
+          },
         ),
         // Bouton Partage
         IconButton(

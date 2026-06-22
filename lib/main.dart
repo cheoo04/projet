@@ -19,6 +19,7 @@ import 'screens/modern_home_screen.dart';
 import 'screens/modern_catalog_screen.dart';
 import 'screens/modern_product_detail_screen.dart';
 import 'screens/modern_cart_screen.dart';
+import 'screens/comparison_screen.dart';
 import 'screens/admin_screens_loader.dart'; // Chargement différé admin
 import 'screens/auth_screen.dart';
 import 'screens/account_screen.dart';
@@ -116,6 +117,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProductProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => PromotionProvider()),
+        ChangeNotifierProvider(create: (_) => ComparisonProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
@@ -155,6 +157,7 @@ class MyApp extends StatelessWidget {
               '/home': (context) => const ModernHomeScreen(),
               '/catalog': (context) => const ModernCatalogScreen(),
               '/cart': (context) => const ModernCartScreen(),
+              '/comparison': (context) => const ComparisonScreen(),
               '/auth': (context) => const AuthScreen(),
               '/account': (context) => const AccountScreen(),
               '/my-orders': (context) => const MyOrdersScreen(),
