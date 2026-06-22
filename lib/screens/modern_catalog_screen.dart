@@ -10,6 +10,7 @@ import '../widgets/desktop_product_card.dart';
 import '../widgets/desktop_header.dart';
 import '../widgets/ui_components.dart';
 import '../widgets/comparison_banner.dart';
+import 'chat_screen.dart';
 import '../web_config/responsive_config.dart';
 import '../web_config/navigation_helper.dart';
 
@@ -185,6 +186,15 @@ class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
           ),
           const ComparisonBanner(),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ChatScreen()),
+        ),
+        backgroundColor: AppTheme.primaryViolet,
+        tooltip: 'Besoin d\'aide ?',
+        child: const Icon(Icons.support_agent, color: Colors.white),
       ),
     );
   }
