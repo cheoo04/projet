@@ -161,5 +161,41 @@ void main() {
       expect(updated.userId, 'u1');
       expect(updated.status, OrderStatus.confirmed);
     });
+
+    test('round-trip toMap/fromMap conserve les champs de fidélité', () {
+      final order = Order(
+        id: 'o1',
+        userId: 'u1',
+        customerName: 'Client Test',
+        customerEmail: 'client@test.ci',
+        customerPhone: '0700000000',
+        deliveryAddress: 'Abidjan',
+        items: [sampleItem()],
+        status: OrderStatus.pending,
+        createdAt: DateTime(2026, 6, 19),
+        pointsRedeemed: 50,
+      );
+      final restored = Order.fromMap(order.toMap(), order.id);
+      expect(restored.pointsRedeemed, 50);
+      expect(restored.pointsCredited, false);
+      expect(restored.pointsEarned, null);
+    });
+
+    test('pointsCredited et pointsEarned par défaut à false/null', () {
+      final order = Order(
+        id: 'o2',
+        userId: 'u1',
+        customerName: 'Client Test',
+        customerEmail: 'client@test.ci',
+        customerPhone: '0700000000',
+        deliveryAddress: 'Abidjan',
+        items: [sampleItem()],
+        status: OrderStatus.delivered,
+        createdAt: DateTime(2026, 6, 19),
+      );
+      expect(order.pointsCredited, false);
+      expect(order.pointsEarned, null);
+      expect(order.pointsRedeemed, 0);
+    });
   });
 }

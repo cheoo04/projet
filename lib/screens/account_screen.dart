@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/favorites_service.dart';
+import '../services/loyalty_service.dart';
 import '../models/app_user.dart';
 import '../widgets/safe_network_avatar.dart';
 import '../widgets/responsive_scaffold.dart';
@@ -33,6 +34,8 @@ class _AccountScreenState extends State<AccountScreen> {
   AppUser? _currentUser;
   bool _isLoading = true;
   bool _isAdminMode = true; // Pour admin : switch entre mode admin et client
+  final LoyaltyService _loyaltyService = LoyaltyService();
+  int _loyaltyPoints = 0;
 
   @override
   void initState() {
@@ -51,6 +54,7 @@ class _AccountScreenState extends State<AccountScreen> {
           _currentUser = AppUser.fromFirestore(doc);
         }
       }
+      _loyaltyPoints = await _loyaltyService.getPoints();
     } catch (e) {
       debugPrint('Erreur chargement utilisateur: $e');
     }
@@ -402,17 +406,23 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
           const SizedBox(height: 24),
           
-          // Quick Stats (placeholder)
-          Row(
-            children: [
-              Expanded(child: _buildStatCard('Commandes', '12', Icons.shopping_bag, AppTheme.info)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('Produits', '48', Icons.inventory, AppTheme.success)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildStatCard('Clients', '156', Icons.people, AppTheme.warning)),
-            ],
-          ),
+          // Programme de fidélité (visible pour tout client connecté)
+          _buildLoyaltyCard(),
           const SizedBox(height: 24),
+
+          // Quick Stats admin (placeholder) — visible uniquement en mode admin
+          if (isAdmin) ...[
+            Row(
+              children: [
+                Expanded(child: _buildStatCard('Commandes', '12', Icons.shopping_bag, AppTheme.info)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStatCard('Produits', '48', Icons.inventory, AppTheme.success)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStatCard('Clients', '156', Icons.people, AppTheme.warning)),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
           
           // Menu Admin
           Text(
@@ -551,6 +561,54 @@ class _AccountScreenState extends State<AccountScreen> {
             Text(
               title,
               style: const TextStyle(fontSize: 11),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Carte du programme de fidélité : solde de points actuel et explication
+  /// rapide. Visible pour tout client connecté (même sans points encore).
+  Widget _buildLoyaltyCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryViolet.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.stars_rounded,
+                color: AppTheme.primaryViolet,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$_loyaltyPoints points',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '1 point = 10 FCFA, utilisable au paiement',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

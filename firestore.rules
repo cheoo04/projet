@@ -52,10 +52,14 @@ service cloud.firestore {
                        request.resource.data.email == 'admin@pharrellphone.com' &&
                        request.resource.data.role == 'admin');
       
-      // Mise à jour : propriétaire pour ses données, admin pour tout
+      // Mise à jour : propriétaire pour ses données (sauf role et loyaltyPoints,
+      // ce dernier ne devant être modifié que par les Cloud Functions de
+      // fidélité, qui contournent ces règles via les droits admin), admin pour tout
       allow update: if (isOwner(userId) && 
                         (!('role' in request.resource.data.diff(resource.data).changedKeys()) || 
-                         request.resource.data.role == resource.data.role)) ||
+                         request.resource.data.role == resource.data.role) &&
+                        (!('loyaltyPoints' in request.resource.data.diff(resource.data).changedKeys()) ||
+                         request.resource.data.loyaltyPoints == resource.data.loyaltyPoints)) ||
                        isAdmin();
       
       // Suppression : seulement admin

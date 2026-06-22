@@ -80,6 +80,9 @@ class Order {
   final DateTime? updatedAt;
   final String? notes;
   final List<OrderStatusEntry> statusHistory;
+  final bool pointsCredited;
+  final int? pointsEarned;
+  final int pointsRedeemed;
 
   Order({
     required this.id,
@@ -94,6 +97,9 @@ class Order {
     this.updatedAt,
     this.notes,
     this.statusHistory = const [],
+    this.pointsCredited = false,
+    this.pointsEarned,
+    this.pointsRedeemed = 0,
   }) : totalAmount = items.fold(0, (somme, item) => somme + item.totalPrice);
 
   factory Order.fromMap(Map<String, dynamic> map, String docId) {
@@ -137,6 +143,9 @@ class Order {
               )
               .toList() ??
           [],
+      pointsCredited: map['pointsCredited'] as bool? ?? false,
+      pointsEarned: map['pointsEarned'] as int?,
+      pointsRedeemed: map['pointsRedeemed'] as int? ?? 0,
     );
   }
 
@@ -155,6 +164,9 @@ class Order {
       'updatedAt': updatedAt,
       'notes': notes,
       'statusHistory': statusHistory.map((entry) => entry.toMap()).toList(),
+      'pointsCredited': pointsCredited,
+      'pointsEarned': pointsEarned,
+      'pointsRedeemed': pointsRedeemed,
     };
   }
 
@@ -169,6 +181,9 @@ class Order {
     DateTime? updatedAt,
     String? notes,
     List<OrderStatusEntry>? statusHistory,
+    bool? pointsCredited,
+    int? pointsEarned,
+    int? pointsRedeemed,
   }) {
     return Order(
       id: id,
@@ -183,6 +198,9 @@ class Order {
       updatedAt: updatedAt ?? this.updatedAt,
       notes: notes ?? this.notes,
       statusHistory: statusHistory ?? this.statusHistory,
+      pointsCredited: pointsCredited ?? this.pointsCredited,
+      pointsEarned: pointsEarned ?? this.pointsEarned,
+      pointsRedeemed: pointsRedeemed ?? this.pointsRedeemed,
     );
   }
 }

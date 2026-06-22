@@ -523,3 +523,105 @@ export const verifyTwoFactorCode = functions
     functions.logger.info(`✅ 2FA vérifiée pour ${uid}`);
     return { success: true };
   });
+/**
+ * Cloud Function déclenchée à chaque mise à jour d'une commande.
+ * Si la commande vient de passer au statut "delivered" et n'a pas encore
+ * été créditée, crédite les points de fidélité au client (1 point / 1000 FCFA).
+ * Le garde pointsCredited empêche tout double-crédit, même en cas de
+ * déclenchement multiple du trigger.
+ */
+export const creditLoyaltyPoints = functions
+  .region("europe-west1")
+  .firestore.document("orders/{orderId}")
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+
+    const justDelivered =
+      before.status !== "delivered" && after.status === "delivered";
+
+    if (!justDelivered || after.pointsCredited === true) {
+      return null;
+    }
+
+    const pointsEarned = Math.floor((after.totalAmount as number) / 1000);
+    const userId = after.userId as string;
+
+    if (!userId || pointsEarned <= 0) {
+      await change.after.ref.update({ pointsCredited: true, pointsEarned: 0 });
+      return null;
+    }
+
+    const userRef = db.collection("users").doc(userId);
+
+    await db.runTransaction(async (transaction) => {
+      const userSnap = await transaction.get(userRef);
+      const currentPoints = userSnap.data()?.loyaltyPoints ?? 0;
+
+      transaction.update(userRef, {
+        loyaltyPoints: currentPoints + pointsEarned,
+      });
+      transaction.update(change.after.ref, {
+        pointsCredited: true,
+        pointsEarned,
+      });
+    });
+
+    functions.logger.info(
+      `✅ ${pointsEarned} points crédités à ${userId} (commande ${context.params.orderId})`
+    );
+    return null;
+  });
+
+/**
+ * Cloud Function callable : décrémente immédiatement le solde de points de
+ * fidélité du client, et renvoie le montant de réduction correspondant
+ * (1 point = 10 FCFA). Appelée juste avant la création d'une commande
+ * quand le client choisit d'utiliser des points au checkout.
+ */
+export const redeemLoyaltyPoints = functions
+  .region("europe-west1")
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "Authentification requise"
+      );
+    }
+
+    const { pointsToUse } = data as { pointsToUse: number };
+    if (
+      typeof pointsToUse !== "number" ||
+      pointsToUse <= 0 ||
+      !Number.isInteger(pointsToUse)
+    ) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "pointsToUse doit être un entier positif"
+      );
+    }
+
+    const uid = context.auth.uid;
+    const userRef = db.collection("users").doc(uid);
+
+    const discountAmount = await db.runTransaction(async (transaction) => {
+      const userSnap = await transaction.get(userRef);
+      const currentPoints = userSnap.data()?.loyaltyPoints ?? 0;
+
+      if (pointsToUse > currentPoints) {
+        throw new functions.https.HttpsError(
+          "failed-precondition",
+          "Solde de points insuffisant"
+        );
+      }
+
+      transaction.update(userRef, {
+        loyaltyPoints: currentPoints - pointsToUse,
+      });
+
+      return pointsToUse * 10;
+    });
+
+    functions.logger.info(`✅ ${pointsToUse} points utilisés par ${uid}`);
+    return { success: true, discountAmount };
+  });

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../config/app_theme.dart';
 import '../models/order.dart' as order_model;
 import '../services/order_service.dart';
+import '../services/loyalty_service.dart';
 import '../widgets/ui_components.dart';
 import '../widgets/custom_snackbar.dart';
 import '../widgets/styled_dialogs.dart';
@@ -28,6 +29,33 @@ class _ModernCartScreenState extends State<ModernCartScreen> {
 
   /// Numéro Wave pour le paiement — identique au numéro WhatsApp de commande.
   static const String _waveNumber = '07 88 71 18 96';
+
+  final LoyaltyService _loyaltyService = LoyaltyService();
+  final TextEditingController _pointsController = TextEditingController();
+  int _availablePoints = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loyaltyService.getPoints().then((points) {
+      if (mounted) setState(() => _availablePoints = points);
+    });
+  }
+
+  @override
+  void dispose() {
+    _pointsController.dispose();
+    super.dispose();
+  }
+
+  /// Réduction en FCFA correspondant au nombre de points actuellement saisi,
+  /// plafonnée au solde réellement disponible. Purement indicatif côté UI :
+  /// la vérification réelle se fait côté serveur au moment de _placeOrder.
+  int get _pointsDiscountPreview {
+    final typed = int.tryParse(_pointsController.text.trim()) ?? 0;
+    final clamped = typed > _availablePoints ? _availablePoints : typed;
+    return clamped < 0 ? 0 : clamped * 10;
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -289,6 +317,72 @@ class _ModernCartScreenState extends State<ModernCartScreen> {
               '${total.toStringAsFixed(0)} FCFA',
               true,
             ),
+
+            // Programme de fidélité (uniquement si le client a des points)
+            if (_availablePoints > 0) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryViolet.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.stars_rounded,
+                          size: 18,
+                          color: AppTheme.primaryViolet,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '$_availablePoints points disponibles (1 pt = 10 FCFA)',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _pointsController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              isDense: true,
+                              hintText: 'Points à utiliser',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                            ),
+                            onChanged: (_) => setState(() {}),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        if (_pointsDiscountPreview > 0)
+                          Text(
+                            '-${_pointsDiscountPreview.toStringAsFixed(0)} FCFA',
+                            style: TextStyle(
+                              color: AppTheme.success,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
             
             const SizedBox(height: 16),
             
@@ -390,6 +484,34 @@ class _ModernCartScreenState extends State<ModernCartScreen> {
       return;
     }
 
+    // Utiliser les points de fidélité si le client en a saisi. Décompte
+    // immédiat côté serveur (transaction), avant même la création de la
+    // commande, pour empêcher toute double-dépense sur deux commandes
+    // simultanées. Si ça échoue (solde insuffisant), on bloque la commande
+    // plutôt que de continuer sans la réduction promise au client.
+    int pointsRedeemed = 0;
+    int discountAmount = 0;
+    final pointsToUse = int.tryParse(_pointsController.text.trim()) ?? 0;
+
+    if (pointsToUse > 0) {
+      try {
+        discountAmount = await _loyaltyService.redeemPoints(pointsToUse);
+        pointsRedeemed = pointsToUse;
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Impossible d'utiliser ces points : solde insuffisant",
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     // Créer la commande dans Firestore (pour le suivi côté client dans
     // "Mes Commandes"). Ne bloque jamais l'envoi WhatsApp si ça échoue :
     // WhatsApp reste le canal principal de la commande aujourd'hui.
@@ -422,6 +544,7 @@ class _ModernCartScreenState extends State<ModernCartScreen> {
             timestamp: now,
           ),
         ],
+        pointsRedeemed: pointsRedeemed,
       );
       await OrderService().add(order);
     } catch (e) {
@@ -451,10 +574,14 @@ class _ModernCartScreenState extends State<ModernCartScreen> {
     }
     
     final subtotal = cart.totalAmount;
-    final total = subtotal + _deliveryFee;
+    final totalBeforeDiscount = subtotal + _deliveryFee;
+    final total = totalBeforeDiscount - discountAmount;
     
     message += '\n💰 *Sous-total :* ${subtotal.toStringAsFixed(0)} FCFA\n';
     message += '🚚 *Livraison :* ${_deliveryFee.toStringAsFixed(0)} FCFA\n';
+    if (discountAmount > 0) {
+      message += '🎁 *Réduction fidélité ($pointsRedeemed pts) :* -${discountAmount.toStringAsFixed(0)} FCFA\n';
+    }
     message += '\n*TOTAL : ${total.toStringAsFixed(0)} FCFA*\n\n';
     message += '📍 *Adresse de livraison :* [À compléter]\n\n';
     message += '💳 *Paiement Wave disponible après confirmation :* $_waveNumber\n\n';
