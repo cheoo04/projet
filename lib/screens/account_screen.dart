@@ -276,6 +276,10 @@ class _AccountScreenState extends State<AccountScreen> {
             ),
             const SizedBox(height: 16),
             
+            // Programme de fidélité
+            _buildLoyaltyCard(),
+            const SizedBox(height: 16),
+            
             // Menu options
             _buildMenuSection(context, isDark, 'Mes achats', [
               _buildMenuItem(
@@ -406,23 +410,21 @@ class _AccountScreenState extends State<AccountScreen> {
           ),
           const SizedBox(height: 24),
           
-          // Programme de fidélité (visible pour tout client connecté)
+          // Programme de fidélité
           _buildLoyaltyCard(),
           const SizedBox(height: 24),
 
-          // Quick Stats admin (placeholder) — visible uniquement en mode admin
-          if (isAdmin) ...[
-            Row(
-              children: [
-                Expanded(child: _buildStatCard('Commandes', '12', Icons.shopping_bag, AppTheme.info)),
-                const SizedBox(width: 12),
-                Expanded(child: _buildStatCard('Produits', '48', Icons.inventory, AppTheme.success)),
-                const SizedBox(width: 12),
-                Expanded(child: _buildStatCard('Clients', '156', Icons.people, AppTheme.warning)),
-              ],
-            ),
-            const SizedBox(height: 24),
-          ],
+          // Quick Stats admin (placeholder)
+          Row(
+            children: [
+              Expanded(child: _buildStatCard('Commandes', '12', Icons.shopping_bag, AppTheme.info)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildStatCard('Produits', '48', Icons.inventory, AppTheme.success)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildStatCard('Clients', '156', Icons.people, AppTheme.warning)),
+            ],
+          ),
+          const SizedBox(height: 24),
           
           // Menu Admin
           Text(
