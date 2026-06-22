@@ -7,6 +7,8 @@ import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/favorites_service.dart';
+import '../services/share_service.dart';
+import '../services/wishlist_share_service.dart';
 import '../services/loyalty_service.dart';
 import '../models/app_user.dart';
 import '../widgets/safe_network_avatar.dart';
@@ -1145,14 +1147,24 @@ class _AccountScreenState extends State<AccountScreen> {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(Icons.favorite, color: Colors.red),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Mes Favoris',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      children: [
+                        const Icon(Icons.favorite, color: Colors.red),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Mes Favoris',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.share),
+                      tooltip: 'Partager ma liste',
+                      onPressed: () => _shareWishlist(context),
                     ),
                   ],
                 ),
@@ -1362,6 +1374,27 @@ class _AccountScreenState extends State<AccountScreen> {
         ),
       ),
     );
+  }
+  
+  /// Publie la liste de favoris actuelle et ouvre le partage natif avec le
+  /// lien public généré. Snapshot figé au moment du partage.
+  Future<void> _shareWishlist(BuildContext context) async {
+    try {
+      final favoriteIds = await FavoritesService.getFavorites();
+      final shareId = await WishlistShareService().publishWishlist(favoriteIds);
+      final url = 'https://pharrellphone.com/wishlist/$shareId';
+
+      await ShareService.shareText(
+        'Découvre ma liste de favoris sur Pharrell Phone : $url',
+        subject: 'Ma liste de favoris Pharrell Phone',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
   
   /// Ouvrir WhatsApp pour le support

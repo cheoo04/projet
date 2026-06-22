@@ -91,6 +91,20 @@ service cloud.firestore {
       allow write: if isAdmin() || isAuthenticated();
     }
     
+    // Règles pour la collection shared_wishlists (listes de favoris partagées)
+    match /shared_wishlists/{shareId} {
+      // Lecture : publique, n'importe qui avec le lien peut consulter
+      allow read: if true;
+
+      // Création : utilisateur authentifié, propriétaire du document créé
+      allow create: if isAuthenticated() &&
+                       request.resource.data.ownerId == request.auth.uid;
+
+      // Pas de modification ni suppression pour le MVP (chaque partage crée
+      // un nouveau document plutôt que d'en modifier un existant)
+      allow update, delete: if false;
+    }
+    
     // Règles pour la collection categories
     match /categories/{categoryId} {
       // Lecture : public (tous peuvent voir les catégories)

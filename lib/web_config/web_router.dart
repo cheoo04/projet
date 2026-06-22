@@ -8,6 +8,7 @@ import '../screens/modern_catalog_screen.dart';
 import '../screens/modern_product_detail_screen.dart';
 import '../screens/modern_cart_screen.dart';
 import '../screens/comparison_screen.dart';
+import '../screens/shared_wishlist_screen.dart';
 import '../screens/admin_screens_loader.dart'; // Chargement différé admin
 import '../screens/auth_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -127,6 +128,16 @@ class WebRouter {
           path: '/comparison',
           name: 'comparison',
           builder: (context, state) => const ComparisonScreen(),
+        ),
+        
+        // Wishlist partagée (lien public, sans authentification requise)
+        GoRoute(
+          path: '/wishlist/:shareId',
+          name: 'shared_wishlist',
+          builder: (context, state) {
+            final shareId = state.pathParameters['shareId']!;
+            return SharedWishlistScreen(shareId: shareId);
+          },
         ),
         
         // Authentification
