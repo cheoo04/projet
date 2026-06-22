@@ -4,7 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:local_auth/local_auth.dart';
+import 'package:local_auth/local_auth.dart' hide BiometricType;
 import 'package:local_auth/error_codes.dart' as auth_error;
 import 'biometric_auth_types.dart';
 import 'logging_service.dart';
