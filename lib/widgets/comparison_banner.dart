@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../providers/app_providers.dart';
 import '../screens/comparison_screen.dart';
+import '../web_config/navigation_helper.dart'; // ← ajouter cette ligne
+
 
 /// Bandeau flottant affiché quand au moins 1 produit est en comparaison.
 /// À placer dans le `body` (via un `Stack`) des écrans concernés.
@@ -26,10 +28,7 @@ class ComparisonBanner extends StatelessWidget {
             color: AppTheme.primaryViolet,
             child: InkWell(
               borderRadius: BorderRadius.circular(30),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ComparisonScreen()),
-              ),
+              onTap: () => AppNavigator.push(context, '/comparison'),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
