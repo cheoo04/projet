@@ -263,11 +263,30 @@ class _LoginScreenState extends State<LoginScreen> {
             }
         }
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
-        );
+    } // APRÈS
+      } catch (e) {
+        if (mounted) {
+          final errorStr = e.toString().toLowerCase();
+          String message;
+          if (errorStr.contains('offline') || 
+              errorStr.contains('unavailable') || 
+              errorStr.contains('network')) {
+            message = 'Connexion impossible. Vérifiez votre réseau.';
+          } else if (errorStr.contains('wrong-password') || 
+                    errorStr.contains('invalid-credential') ||
+                    errorStr.contains('invalid-email')) {
+            message = 'Email ou mot de passe incorrect.';
+          } else if (errorStr.contains('user-not-found')) {
+            message = 'Aucun compte avec cet email.';
+          } else if (errorStr.contains('too-many-requests')) {
+            message = 'Trop de tentatives. Réessayez plus tard.';
+          } else {
+            message = 'Une erreur est survenue. Réessayez.';
+          }
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(message), backgroundColor: Colors.red),
+          );
+        }
       }
     } finally {
       if (mounted) {
