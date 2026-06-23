@@ -187,14 +187,24 @@ class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
           const ComparisonBanner(),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ChatScreen()),
-        ),
-        backgroundColor: AppTheme.primaryViolet,
-        tooltip: 'Besoin d\'aide ?',
-        child: const Icon(Icons.support_agent, color: Colors.white),
+      floatingActionButton: Consumer<ComparisonProvider>(
+        builder: (context, comparison, _) {
+          // Quand le bandeau de comparaison est visible (Positioned bottom: 16,
+          // hauteur ~60px), on remonte le FAB pour éviter qu'ils se chevauchent.
+          final bottomOffset = comparison.productIds.isEmpty ? 0.0 : 76.0;
+          return Padding(
+            padding: EdgeInsets.only(bottom: bottomOffset),
+            child: FloatingActionButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ChatScreen()),
+              ),
+              backgroundColor: AppTheme.primaryViolet,
+              tooltip: 'Besoin d\'aide ?',
+              child: const Icon(Icons.support_agent, color: Colors.white),
+            ),
+          );
+        },
       ),
     );
   }

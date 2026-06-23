@@ -59,9 +59,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Connectez-vous à votre compte',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
+                      style: Theme.of(context).textTheme.bodyLarge
+                          ?.copyWith(color: Colors.grey[600]),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 32),
@@ -230,7 +229,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (mounted) {
-        // Redirection basée sur le rôle
         final role = await _authService.getCurrentUserRole();
         switch (role) {
           case UserRole.admin:
@@ -263,30 +261,28 @@ class _LoginScreenState extends State<LoginScreen> {
             }
         }
       }
-    } // APRÈS
-      } catch (e) {
-        if (mounted) {
-          final errorStr = e.toString().toLowerCase();
-          String message;
-          if (errorStr.contains('offline') || 
-              errorStr.contains('unavailable') || 
-              errorStr.contains('network')) {
-            message = 'Connexion impossible. Vérifiez votre réseau.';
-          } else if (errorStr.contains('wrong-password') || 
-                    errorStr.contains('invalid-credential') ||
-                    errorStr.contains('invalid-email')) {
-            message = 'Email ou mot de passe incorrect.';
-          } else if (errorStr.contains('user-not-found')) {
-            message = 'Aucun compte avec cet email.';
-          } else if (errorStr.contains('too-many-requests')) {
-            message = 'Trop de tentatives. Réessayez plus tard.';
-          } else {
-            message = 'Une erreur est survenue. Réessayez.';
-          }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message), backgroundColor: Colors.red),
-          );
+    } catch (e) {
+      if (mounted) {
+        final errorStr = e.toString().toLowerCase();
+        String message;
+        if (errorStr.contains('offline') ||
+            errorStr.contains('unavailable') ||
+            errorStr.contains('network')) {
+          message = 'Connexion impossible. Vérifiez votre réseau.';
+        } else if (errorStr.contains('wrong-password') ||
+            errorStr.contains('invalid-credential') ||
+            errorStr.contains('invalid-email')) {
+          message = 'Email ou mot de passe incorrect.';
+        } else if (errorStr.contains('user-not-found')) {
+          message = 'Aucun compte avec cet email.';
+        } else if (errorStr.contains('too-many-requests')) {
+          message = 'Trop de tentatives. Réessayez plus tard.';
+        } else {
+          message = 'Une erreur est survenue. Réessayez.';
         }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
       }
     } finally {
       if (mounted) {

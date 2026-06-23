@@ -372,6 +372,7 @@ export const getCloudinarySignature = functions
 
     return { signature };
   });
+
 /**
  * Cloud Function callable : génère un code de vérification à 6 chiffres,
  * le stocke temporairement (10 min) dans Firestore, et l'envoie par email
@@ -523,6 +524,7 @@ export const verifyTwoFactorCode = functions
     functions.logger.info(`✅ 2FA vérifiée pour ${uid}`);
     return { success: true };
   });
+
 /**
  * Cloud Function déclenchée à chaque mise à jour d'une commande.
  * Si la commande vient de passer au statut "delivered" et n'a pas encore
@@ -544,7 +546,12 @@ export const creditLoyaltyPoints = functions
       return null;
     }
 
-    const pointsEarned = Math.floor((after.totalAmount as number) / 1000);
+    const rawTotalAmount = after.totalAmount;
+    const totalAmount =
+      typeof rawTotalAmount === "number" && Number.isFinite(rawTotalAmount)
+        ? rawTotalAmount
+        : 0;
+    const pointsEarned = Math.floor(totalAmount / 1000);
     const userId = after.userId as string;
 
     if (!userId || pointsEarned <= 0) {
@@ -625,6 +632,7 @@ export const redeemLoyaltyPoints = functions
     functions.logger.info(`✅ ${pointsToUse} points utilisés par ${uid}`);
     return { success: true, discountAmount };
   });
+
 /**
  * Instruction système fixe pour l'assistant IA — jamais modifiable depuis
  * le client. Cadre l'assistant sur le rôle de représentant Pharrell Phone.
