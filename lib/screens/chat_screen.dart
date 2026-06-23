@@ -37,8 +37,9 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       await _chatService.sendMessage(text);
     } catch (e) {
-      // L'erreur n'ajoute pas de réponse modèle à l'historique ; on affiche
-      // un message ponctuel sans casser l'écran.
+      // Log complet en console pour diagnostic (visible dans les DevTools),
+      // message convivial affiché à l'utilisateur.
+      debugPrint('Erreur chatWithAssistant: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
