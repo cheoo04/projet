@@ -9,6 +9,7 @@ import '../screens/modern_product_detail_screen.dart';
 import '../screens/modern_cart_screen.dart';
 import '../screens/comparison_screen.dart';
 import '../screens/shared_wishlist_screen.dart';
+import '../screens/chat_screen.dart';
 import '../screens/admin_screens_loader.dart'; // Chargement différé admin
 import '../screens/auth_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -138,6 +139,13 @@ class WebRouter {
             final shareId = state.pathParameters['shareId']!;
             return SharedWishlistScreen(shareId: shareId);
           },
+        ),
+        
+        // Assistant IA (chat)
+        GoRoute(
+          path: '/chat',
+          name: 'chat',
+          builder: (context, state) => const ChatScreen(),
         ),
         
         // Authentification
