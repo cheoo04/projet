@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Service pour uploader et gérer les images sur Cloudinary
 /// 
@@ -124,18 +124,36 @@ class CloudinaryService {
     }
   }
 
-  /// Appelle la Cloud Function pour obtenir la signature
-  /// L'apiSecret ne transite jamais vers le client Flutter
+  /// Appelle la Cloud Function pour obtenir la signature.
+  /// L'apiSecret ne transite jamais vers le client Flutter.
+  /// Utilise HTTP direct — contournement bug FlutterFire #17924 (dart2js/Int64).
   Future<String?> _getSignatureFromServer(Map<String, String> paramsToSign) async {
     try {
-      final callable = FirebaseFunctions.instanceFor(region: 'europe-west1')
-          .httpsCallable('getCloudinarySignature');
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        debugPrint('❌ Signature Cloudinary : utilisateur non connecté');
+        return null;
+      }
+      final token = await user.getIdToken();
 
-      final result = await callable.call(<String, dynamic>{
-        'paramsToSign': paramsToSign,
-      });
+      final response = await http.post(
+        Uri.parse(
+            'https://europe-west1-first-pro-cheoo.cloudfunctions.net/getCloudinarySignature'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'data': {'paramsToSign': paramsToSign}}),
+      ).timeout(const Duration(seconds: 30));
 
-      return result.data['signature'] as String?;
+      if (response.statusCode != 200) {
+        debugPrint('❌ Erreur signature Cloud Function: ${response.body}');
+        return null;
+      }
+
+      final result =
+          jsonDecode(response.body)['result'] as Map<String, dynamic>;
+      return result['signature'] as String?;
     } catch (e) {
       debugPrint('❌ Erreur signature Cloud Function: $e');
       return null;

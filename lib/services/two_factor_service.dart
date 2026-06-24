@@ -1,4 +1,6 @@
-import 'package:cloud_functions/cloud_functions.dart';
+import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
 
 /// Raisons d'échec possibles lors de la vérification d'un code 2FA.
 enum TwoFactorFailureReason { expired, invalidCode, tooManyAttempts, unknown }
@@ -12,22 +14,46 @@ class TwoFactorResult {
 
 /// Service d'appel aux Cloud Functions de 2FA par email
 /// (sendTwoFactorCode / verifyTwoFactorCode).
+/// Utilise HTTP direct — contournement bug FlutterFire #17924 (dart2js/Int64).
 class TwoFactorService {
-  final FirebaseFunctions _functions =
-      FirebaseFunctions.instanceFor(region: 'europe-west1');
+  static const String _base =
+      'https://europe-west1-first-pro-cheoo.cloudfunctions.net';
+
+  Future<Map<String, String>> _authHeaders() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('Utilisateur non connecté');
+    final token = await user.getIdToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+  }
+
+  Future<Map<String, dynamic>> _call(
+      String functionName, Map<String, dynamic> data) async {
+    final response = await http
+        .post(
+          Uri.parse('$_base/$functionName'),
+          headers: await _authHeaders(),
+          body: jsonEncode({'data': data}),
+        )
+        .timeout(const Duration(seconds: 30));
+
+    if (response.statusCode != 200) {
+      final err = jsonDecode(response.body);
+      throw Exception(err['error']?['message'] ?? 'Erreur ${response.statusCode}');
+    }
+    return (jsonDecode(response.body)['result'] as Map<String, dynamic>);
+  }
 
   /// Demande l'envoi d'un nouveau code de vérification par email.
-  /// Lève une exception (FirebaseFunctionsException) en cas d'échec.
   Future<void> sendCode() async {
-    final callable = _functions.httpsCallable('sendTwoFactorCode');
-    await callable.call();
+    await _call('sendTwoFactorCode', {});
   }
 
   /// Vérifie le code saisi par l'utilisateur.
   Future<TwoFactorResult> verifyCode(String code) async {
-    final callable = _functions.httpsCallable('verifyTwoFactorCode');
-    final result = await callable.call({'code': code});
-    final data = result.data as Map<String, dynamic>;
+    final data = await _call('verifyTwoFactorCode', {'code': code});
 
     if (data['success'] == true) {
       return TwoFactorResult(success: true);
