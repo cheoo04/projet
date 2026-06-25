@@ -906,26 +906,31 @@ ${specsStr || "  (aucune spec détaillée disponible)"}`;
       })
       .join("\n\n");
 
-    const systemInstruction = `Tu es un expert conseiller en smartphones et électronique pour Pharrell Phone, une boutique à Abidjan, Côte d'Ivoire. Tu analyses des produits de manière objective et utile.`;
+    const systemInstruction = `Tu es un ami expert en smartphones qui aide des clients à Abidjan, Côte d'Ivoire. Tu parles franchement, avec chaleur, comme quelqu'un qui connaît vraiment bien les téléphones et veut vraiment aider. Pas de jargon inutile, pas de tournures corporatives.`;
 
-    const prompt = `Compare ces ${products.length} produits de manière claire et structurée :
+    const prompt = `Tu dois comparer ces ${products.length} téléphones pour un client qui hésite entre eux.
 
 ${productsDesc}
 
-Fournis une analyse en 3 parties :
+Réponds en JSON uniquement, sans markdown autour, avec cette structure exacte :
+{
+  "strengths": [
+    { "name": "Nom du produit", "points": ["point fort 1", "point fort 2", "point fort 3"] }
+  ],
+  "verdict": [
+    { "profile": "Pour le meilleur rapport qualité/prix", "winner": "Nom du produit", "reason": "explication courte et directe en 1-2 phrases max" },
+    { "profile": "Pour les photos", "winner": "Nom du produit", "reason": "..." },
+    { "profile": "Pour les performances", "winner": "Nom du produit", "reason": "..." },
+    { "profile": "Pour la batterie", "winner": "Nom du produit", "reason": "..." }
+  ],
+  "summary": "Un paragraphe de 3-4 phrases max, comme si tu parlais à un ami. Direct, honnête, sans formules creuses. Commence par le contexte (ex: 'Ces deux téléphones sont dans des gammes très différentes...') et termine par une recommandation claire."
+}
 
-1. **Points forts de chaque produit** (2-3 points clés par produit)
-
-2. **Comparaison des critères clés** (prix, écran, batterie, performance, photo si pertinent)
-
-3. **Verdict** selon le profil :
-   - Meilleur rapport qualité/prix
-   - Meilleures performances
-   - Meilleure photo/créativité
-   - Meilleure batterie/durabilité
-   (n'inclure que les profils pertinents pour ces produits)
-
-Sois direct, concis et utile. Prix en FCFA, contexte Côte d'Ivoire.`;
+Règles :
+- N'inclure dans verdict que les profils vraiment pertinents pour ces produits (3-4 max)
+- Les "points" dans strengths : phrases courtes, concrètes, pas de superlatifs vides
+- Le "reason" dans verdict : 1-2 phrases max, ton ami expert, prix en FCFA si pertinent
+- Retourne UNIQUEMENT le JSON, rien d'autre`;
 
     const contents = [{ role: "user", parts: [{ text: prompt }] }];
     const analysis = await callGemini(apiKey, systemInstruction, contents);
