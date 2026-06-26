@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'config/firestore_config.dart';
 import 'config/app_theme.dart';
@@ -62,6 +63,15 @@ void main() async {
 
     // Initialiser les données de locale pour le formatage des dates
     await initializeDateFormatting('fr_FR', null);
+
+    // Connexion anonyme silencieuse — garantit que context.auth est toujours
+    // présent dans les Cloud Functions, même pour les visiteurs non connectés.
+    // Si l'utilisateur se connecte ensuite avec son compte, Firebase remplace
+    // la session anonyme par son vrai compte.
+    final auth = FirebaseAuth.instance;
+    if (auth.currentUser == null) {
+      await auth.signInAnonymously();
+    }
 
     // Lancer l'app immédiatement
     runApp(const MyApp());

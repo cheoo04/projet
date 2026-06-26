@@ -425,17 +425,21 @@ class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
               minCardWidth = 180.0;
               cardHeight = 380.0;
             } else {
-              maxCardWidth = 200.0;
-              minCardWidth = 150.0;
-              cardHeight = 340.0;
+              // Mobile : toujours 2 colonnes, hauteur fixe adaptée
+              maxCardWidth = 220.0;
+              minCardWidth = 160.0;
+              cardHeight = 320.0;
             }
             
-            final spacing = isDesktop ? 20.0 : 12.0;
+            final spacing = isDesktop ? 20.0 : 10.0;
             final padding = ResponsiveBreakpoints.horizontalPadding(context);
             
             // Calculer le nombre de colonnes optimal
             final availableWidth = screenWidth - (padding * 2);
-            int crossAxisCount = (availableWidth / minCardWidth).floor();
+            // Sur mobile : forcer 2 colonnes
+            int crossAxisCount = ResponsiveBreakpoints.isMobile(context)
+                ? 2
+                : (availableWidth / minCardWidth).floor();
             crossAxisCount = crossAxisCount.clamp(2, 6);
             
             // Calculer la largeur réelle des cartes

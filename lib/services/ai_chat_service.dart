@@ -55,9 +55,14 @@ class AiChatService {
 
       if (response.statusCode != 200) {
         final err = jsonDecode(response.body);
-        final msg = err['error']?['message'] ?? 'Erreur ${response.statusCode}';
+        final msg = err['error']?['message'] ?? 'Erreur \${response.statusCode}';
         if (msg.contains('resource-exhausted')) {
           throw Exception('[firebase_functions/resource-exhausted] $msg');
+        }
+        if (response.statusCode == 401 || msg.contains('unauthenticated')) {
+          // Tenter une reconnexion anonyme silencieuse puis relancer
+          await FirebaseAuth.instance.signInAnonymously();
+          throw Exception('Session expirée, réessayez.');
         }
         throw Exception(msg);
       }

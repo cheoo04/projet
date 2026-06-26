@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../models/product.dart';
@@ -193,16 +194,21 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
 
     final specLabels = _allSpecLabels;
 
-    return ResponsiveScaffold(
-      appBar: AppBar(
-        title: const Text('Comparer'),
-        actions: [
-          TextButton(
-            onPressed: () { context.read<ComparisonProvider>().clear(); Navigator.pop(context); },
-            child: const Text('Tout effacer', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) context.pop();
+      },
+      child: ResponsiveScaffold(
+        appBar: AppBar(
+          title: const Text('Comparer'),
+          actions: [
+            TextButton(
+              onPressed: () { context.read<ComparisonProvider>().clear(); context.pop(); },
+              child: const Text('Tout effacer', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -302,6 +308,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

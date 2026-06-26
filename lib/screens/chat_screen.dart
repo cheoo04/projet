@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_theme.dart';
 import '../services/ai_chat_service.dart';
@@ -74,9 +75,14 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     _scrollToBottom();
-    return ResponsiveScaffold(
-      appBar: AppBar(
-        title: const Text('Assistant Pharrell Phone'),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) context.pop();
+      },
+      child: ResponsiveScaffold(
+        appBar: AppBar(
+          title: const Text('Assistant Pharrell Phone'),
         actions: [
           IconButton(
             icon: const Icon(Icons.chat),
@@ -166,6 +172,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 }
@@ -202,8 +209,8 @@ class _AssistantMessage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Texte de la réponse
-          Text(cleanText, style: const TextStyle(color: Colors.black87)),
+          // Texte de la réponse avec rendu Markdown
+          _MarkdownBody(text: cleanText),
 
           // Chips produits (si l'IA en a mentionné)
           if (products.isNotEmpty) ...[
@@ -256,6 +263,123 @@ class _ProductChip extends StatelessWidget {
                   fontWeight: FontWeight.w500)),
         ]),
       ),
+    );
+  }
+}
+
+// ── Rendu Markdown pour les messages de l'assistant ───────────────────────
+
+/// Transforme le Markdown simple de Gemini en widgets Flutter lisibles.
+/// Gère : **gras**, *italique*, ## titres, - listes, ` code inline`.
+class _MarkdownBody extends StatelessWidget {
+  final String text;
+  const _MarkdownBody({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = text.split('\n');
+    final widgets = <Widget>[];
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].trimRight();
+
+      // Ligne vide
+      if (line.isEmpty) {
+        if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 6));
+        continue;
+      }
+
+      // Titre ## ou ###
+      if (line.startsWith('### ')) {
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(top: 8, bottom: 2),
+          child: _inlineSpan(line.substring(4),
+              baseStyle: const TextStyle(fontWeight: FontWeight.bold,
+                  fontSize: 14, color: Colors.black87)),
+        ));
+        continue;
+      }
+      if (line.startsWith('## ')) {
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(top: 10, bottom: 3),
+          child: _inlineSpan(line.substring(3),
+              baseStyle: TextStyle(fontWeight: FontWeight.bold,
+                  fontSize: 15, color: AppTheme.primaryViolet)),
+        ));
+        continue;
+      }
+
+      // Puce - ou *
+      if (line.startsWith('- ') || line.startsWith('* ')) {
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(left: 4, top: 2, bottom: 2),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 6, right: 8),
+              child: Container(
+                width: 5, height: 5,
+                decoration: BoxDecoration(
+                    color: Colors.grey.shade500, shape: BoxShape.circle),
+              ),
+            ),
+            Expanded(child: _inlineSpan(line.substring(2))),
+          ]),
+        ));
+        continue;
+      }
+
+      // Ligne normale
+      widgets.add(_inlineSpan(line));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: widgets,
+    );
+  }
+
+  /// Transforme **gras**, *italique*, `code` en TextSpans.
+  Widget _inlineSpan(String line, {TextStyle? baseStyle}) {
+    final base = baseStyle ??
+        const TextStyle(fontSize: 14, color: Colors.black87, height: 1.5);
+
+    final spans = <TextSpan>[];
+    // Regex: **gras**, *italique*, `code`
+    final regex = RegExp(r'\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`');
+    int last = 0;
+
+    for (final match in regex.allMatches(line)) {
+      if (match.start > last) {
+        spans.add(TextSpan(text: line.substring(last, match.start), style: base));
+      }
+      if (match.group(1) != null) {
+        // **gras**
+        spans.add(TextSpan(
+            text: match.group(1),
+            style: base.copyWith(fontWeight: FontWeight.bold)));
+      } else if (match.group(2) != null) {
+        // *italique*
+        spans.add(TextSpan(
+            text: match.group(2),
+            style: base.copyWith(fontStyle: FontStyle.italic)));
+      } else if (match.group(3) != null) {
+        // `code`
+        spans.add(TextSpan(
+            text: match.group(3),
+            style: base.copyWith(
+                fontFamily: 'monospace',
+                backgroundColor: Colors.grey.shade200,
+                fontSize: 13)));
+      }
+      last = match.end;
+    }
+    if (last < line.length) {
+      spans.add(TextSpan(text: line.substring(last), style: base));
+    }
+
+    return RichText(
+      text: TextSpan(children: spans, style: base),
     );
   }
 }
