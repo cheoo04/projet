@@ -16,6 +16,7 @@ import 'user_management_screen.dart';
 import 'image_management_screen.dart';
 import 'review_management_screen.dart';
 import 'advanced_analytics_screen.dart';
+import '../services/advanced_analytics_service.dart';
 
 /// Navigation principale pour l'administration avec design moderne
 /// Bottom navigation + Drawer pour accès rapide à toutes les fonctionnalités
@@ -31,8 +32,12 @@ class _ModernAdminNavigationState extends State<ModernAdminNavigation> {
   int _totalProducts = 0;
   int _outOfStock = 0;
   int _notifications = 0;
+  int _totalOrders = 0;
+  int _pendingOrders = 0;
+  double _monthRevenue = 0;
   bool _isLoadingStats = true;
   bool _isNavigating = false;
+  final AdvancedAnalyticsService _analyticsService = AdvancedAnalyticsService();
 
   @override
   void initState() {
@@ -58,12 +63,18 @@ class _ModernAdminNavigationState extends State<ModernAdminNavigation> {
       
       final notificationService = NotificationService();
       final notifications = await notificationService.getNotifications();
+
+      // Charger les vraies stats commandes
+      final orderStats = await _analyticsService.getDashboardStats();
       
       if (mounted) {
         setState(() {
           _totalProducts = products.length;
           _outOfStock = outOfStock;
           _notifications = notifications.length;
+          _totalOrders = orderStats['totalOrders'] as int;
+          _pendingOrders = orderStats['pendingOrders'] as int;
+          _monthRevenue = orderStats['monthRevenue'] as double;
           _isLoadingStats = false;
         });
       }
@@ -539,7 +550,7 @@ class _ModernAdminNavigationState extends State<ModernAdminNavigation> {
       },
       {
         'label': 'Commandes',
-        'value': '0',
+        'value': '$_totalOrders',
         'icon': Icons.shopping_bag,
         'color': AppTheme.success,
         'onTap': () => setState(() => _currentIndex = 2),
@@ -794,29 +805,8 @@ class _ModernAdminNavigationState extends State<ModernAdminNavigation> {
   }
 
   Widget _buildAnalyticsPlaceholder() {
-    // Naviguer vers l'écran d'analytics avancées
-    if (!_isNavigating) {
-      _isNavigating = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const AdvancedAnalyticsScreen(),
-          ),
-        );
-        // Quand on revient, réinitialiser et aller au dashboard
-        if (mounted) {
-          setState(() {
-            _isNavigating = false;
-            _currentIndex = 0;
-          });
-        }
-      });
-    }
-    
-    return const Center(
-      child: CircularProgressIndicator(),
-    );
+    // Analytics intégrées directement sans Navigator.push (évite le bug GoRouter)
+    return const AdvancedAnalyticsScreen();
   }
 
   /// Drawer avec menu complet
