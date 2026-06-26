@@ -1,11 +1,15 @@
-// Service Worker personnalisé pour Pharrell Phone
-// Stratégie de cache: Network-First avec fallback cache pour les ressources critiques
+// Service Worker Pharrell Phone
+// Version incrémentée à chaque deploy Flutter (via flutter_service_worker.js)
+// Stratégie : Network-First pour HTML/JS, Cache-First pour images
 
-const CACHE_NAME = 'pharrell-phone-v1';
-const STATIC_CACHE_NAME = 'pharrell-phone-static-v1';
-const IMAGE_CACHE_NAME = 'pharrell-phone-images-v1';
+// ── Version ────────────────────────────────────────────────────────────────
+// Ce nom de cache DOIT changer à chaque déploiement pour forcer la mise à
+// jour chez tous les utilisateurs. Flutter le gère via son propre SW, mais
+// on synchronise ici pour éviter les conflits.
+const CACHE_VERSION = 'pharrell-v3';
+const IMAGE_CACHE   = 'pharrell-images-v3';
 
-// Ressources à mettre en cache immédiatement
+// Ressources pré-cachées au démarrage
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -16,270 +20,170 @@ const PRECACHE_URLS = [
   '/icons/Icon-512.png',
 ];
 
-// Ressources Firebase à ne jamais mettre en cache
-const NEVER_CACHE_PATTERNS = [
-  /firebasestorage\.googleapis\.com/, // Storage dynamique
-  /firestore\.googleapis\.com/,        // API Firestore
-  /identitytoolkit\.googleapis\.com/,  // Auth API
-  /securetoken\.googleapis\.com/,      // Tokens
-  /fcmregistrations\.googleapis\.com/, // FCM
-  /\/api\//,                           // Endpoints API
+// Jamais mettre en cache : Firebase APIs, Cloud Functions, CDNs dynamiques
+const NEVER_CACHE = [
+  /firebasestorage\.googleapis\.com/,
+  /firestore\.googleapis\.com/,
+  /identitytoolkit\.googleapis\.com/,
+  /securetoken\.googleapis\.com/,
+  /fcmregistrations\.googleapis\.com/,
+  /cloudfunctions\.net/,
+  /generativelanguage\.googleapis\.com/,
+  /googleapis\.com\/v1/,
+  /\/api\//,
 ];
 
-// Patterns pour le cache d'images (1 jour)
-const IMAGE_CACHE_PATTERNS = [
-  /\.png$/,
-  /\.jpg$/,
-  /\.jpeg$/,
-  /\.webp$/,
-  /\.gif$/,
-  /\.svg$/,
-];
+const IMAGE_EXTENSIONS = /\.(png|jpg|jpeg|webp|gif|svg)(\?.*)?$/i;
+const STATIC_EXTENSIONS = /\.(js|css|woff|woff2|ttf|otf)(\?.*)?$/i;
 
-// Installation du Service Worker
+// ── Install ────────────────────────────────────────────────────────────────
 self.addEventListener('install', (event) => {
-  console.log('📦 Service Worker: Installation');
-  
   event.waitUntil(
-    caches.open(STATIC_CACHE_NAME)
-      .then((cache) => {
-        console.log('📦 Pre-caching ressources statiques');
-        return cache.addAll(PRECACHE_URLS);
-      })
+    caches.open(CACHE_VERSION)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
       .then(() => self.skipWaiting())
-      .catch((error) => {
-        console.warn('⚠️ Erreur pre-cache:', error);
-      })
+      .catch(() => self.skipWaiting()) // Ne pas bloquer si un asset manque
   );
 });
 
-// Activation et nettoyage des anciens caches
+// ── Activate : purge les anciens caches ───────────────────────────────────
 self.addEventListener('activate', (event) => {
-  console.log('✅ Service Worker: Activation');
-  
   event.waitUntil(
     caches.keys()
-      .then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            // Supprimer les anciens caches (versions précédentes)
-            if (cacheName !== CACHE_NAME && 
-                cacheName !== STATIC_CACHE_NAME && 
-                cacheName !== IMAGE_CACHE_NAME) {
-              console.log('🗑️ Suppression ancien cache:', cacheName);
-              return caches.delete(cacheName);
-            }
-          })
-        );
-      })
+      .then((keys) => Promise.all(
+        keys
+          .filter((k) => k !== CACHE_VERSION && k !== IMAGE_CACHE)
+          .map((k) => caches.delete(k))
+      ))
       .then(() => self.clients.claim())
   );
 });
 
-// Stratégie de fetch
+// ── Fetch ──────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  
-  // Ignorer les requêtes non-GET
-  if (request.method !== 'GET') {
+
+  // Ignorer non-GET
+  if (request.method !== 'GET') return;
+
+  // Ignorer toutes les APIs Firebase et Cloud Functions
+  if (NEVER_CACHE.some((p) => p.test(url.href))) return;
+
+  // Images Cloudinary et statiques → Cache First
+  if (IMAGE_EXTENSIONS.test(url.pathname) || url.hostname.includes('res.cloudinary.com')) {
+    event.respondWith(cacheFirst(request, IMAGE_CACHE));
     return;
   }
-  
-  // Ignorer les requêtes Firebase (toujours réseau)
-  if (shouldNeverCache(url)) {
+
+  // JS/CSS/fonts Flutter → Stale While Revalidate
+  // (Flutter génère des hash dans les noms, donc on peut servir le cache
+  //  et mettre à jour en fond — le prochain reload aura le nouveau code)
+  if (STATIC_EXTENSIONS.test(url.pathname)) {
+    event.respondWith(staleWhileRevalidate(request, CACHE_VERSION));
     return;
   }
-  
-  // Stratégie spéciale pour les images
-  if (isImageRequest(url)) {
-    event.respondWith(cacheFirstWithNetworkFallback(request, IMAGE_CACHE_NAME));
-    return;
-  }
-  
-  // Stratégie pour les fichiers statiques (CSS, JS, fonts)
-  if (isStaticAsset(url)) {
-    event.respondWith(staleWhileRevalidate(request, STATIC_CACHE_NAME));
-    return;
-  }
-  
-  // Stratégie par défaut: Network first, cache fallback
-  event.respondWith(networkFirstWithCacheFallback(request, CACHE_NAME));
+
+  // HTML et le reste → Network First avec fallback
+  event.respondWith(networkFirst(request, CACHE_VERSION));
 });
 
-// === STRATÉGIES DE CACHE ===
+// ── Stratégies ─────────────────────────────────────────────────────────────
 
-// Network First: Essayer le réseau, fallback vers le cache
-async function networkFirstWithCacheFallback(request, cacheName) {
+async function networkFirst(request, cacheName) {
   try {
     const response = await fetch(request);
-    
-    // Mettre en cache si réponse valide
     if (response.ok) {
       const cache = await caches.open(cacheName);
-      cache.put(request, response.clone());
+      // Eviter de cacher des réponses opaques (cross-origin sans CORS)
+      if (response.type !== 'opaque') {
+        cache.put(request, response.clone());
+      }
     }
-    
     return response;
-  } catch (error) {
-    // Fallback vers le cache
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-      console.log('📱 Serving from cache:', request.url);
-      return cachedResponse;
-    }
-    
-    // Page offline si disponible
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    // Fallback vers index.html pour la navigation SPA
     if (request.destination === 'document') {
       return caches.match('/index.html');
     }
-    
-    throw error;
+    return new Response('Hors ligne', { status: 503 });
   }
 }
 
-// Cache First: Servir du cache, mettre à jour en arrière-plan
-async function cacheFirstWithNetworkFallback(request, cacheName) {
-  const cachedResponse = await caches.match(request);
-  
-  if (cachedResponse) {
-    // Mettre à jour en arrière-plan (pour les images)
-    updateCacheInBackground(request, cacheName);
-    return cachedResponse;
+async function cacheFirst(request, cacheName) {
+  const cached = await caches.match(request);
+  if (cached) {
+    // Mise à jour silencieuse en arrière-plan
+    fetch(request).then((r) => {
+      if (r.ok && r.type !== 'opaque') {
+        caches.open(cacheName).then((c) => c.put(request, r));
+      }
+    }).catch(() => {});
+    return cached;
   }
-  
   try {
     const response = await fetch(request);
-    
-    if (response.ok) {
+    if (response.ok && response.type !== 'opaque') {
       const cache = await caches.open(cacheName);
       cache.put(request, response.clone());
     }
-    
     return response;
-  } catch (error) {
-    // Retourner une image placeholder si échec
+  } catch {
+    // Placeholder SVG pour les images manquantes
     return new Response(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="#ccc" width="100" height="100"/><text x="50" y="55" text-anchor="middle" fill="#666">Image</text></svg>',
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">'
+      + '<rect fill="#f0f0f0" width="100" height="100"/></svg>',
       { headers: { 'Content-Type': 'image/svg+xml' } }
     );
   }
 }
 
-// Stale While Revalidate: Servir du cache, mettre à jour simultanément
 async function staleWhileRevalidate(request, cacheName) {
-  const cachedResponse = await caches.match(request);
-  
-  // Si on a une réponse en cache, la retourner immédiatement
-  // et mettre à jour en arrière-plan
-  if (cachedResponse) {
-    // Mise à jour en arrière-plan (ne pas attendre)
-    fetch(request).then((response) => {
-      if (response.ok) {
-        caches.open(cacheName).then((cache) => {
-          cache.put(request, response);
-        });
-      }
-    }).catch(() => {});
-    
-    return cachedResponse;
-  }
-  
-  // Pas de cache, faire la requête réseau
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const responseClone = response.clone();
-      caches.open(cacheName).then((cache) => {
-        cache.put(request, responseClone);
-      });
+  const cached = await caches.match(request);
+  const fetchPromise = fetch(request).then((r) => {
+    if (r.ok && r.type !== 'opaque') {
+      caches.open(cacheName).then((c) => c.put(request, r.clone()));
     }
-    return response;
-  } catch (error) {
-    throw error;
-  }
+    return r;
+  }).catch(() => null);
+
+  return cached || await fetchPromise;
 }
 
-// Mise à jour du cache en arrière-plan
-async function updateCacheInBackground(request, cacheName) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(cacheName);
-      cache.put(request, response.clone());
-    }
-  } catch (error) {
-    // Ignorer les erreurs de mise à jour en arrière-plan
-  }
-}
-
-// === HELPERS ===
-
-function shouldNeverCache(url) {
-  return NEVER_CACHE_PATTERNS.some(pattern => pattern.test(url.href));
-}
-
-function isImageRequest(url) {
-  return IMAGE_CACHE_PATTERNS.some(pattern => pattern.test(url.pathname)) ||
-         url.hostname.includes('firebasestorage');
-}
-
-function isStaticAsset(url) {
-  return url.pathname.endsWith('.js') ||
-         url.pathname.endsWith('.css') ||
-         url.pathname.endsWith('.woff') ||
-         url.pathname.endsWith('.woff2') ||
-         url.pathname.endsWith('.ttf');
-}
-
-// === GESTION DES MESSAGES ===
-
+// ── Messages ───────────────────────────────────────────────────────────────
 self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') {
-    self.skipWaiting();
-  }
-  
+  if (event.data === 'skipWaiting') self.skipWaiting();
   if (event.data === 'clearCache') {
-    caches.keys().then((names) => {
-      names.forEach((name) => caches.delete(name));
-    });
+    caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
   }
 });
 
-// === PUSH NOTIFICATIONS (FCM) ===
-
+// ── Push Notifications (FCM) ───────────────────────────────────────────────
 self.addEventListener('push', (event) => {
   if (!event.data) return;
-  
   const data = event.data.json();
-  const options = {
-    body: data.notification?.body || 'Nouvelle notification',
-    icon: '/icons/Icon-192.png',
-    badge: '/icons/Icon-192.png',
-    vibrate: [100, 50, 100],
-    data: data.data || {},
-    actions: [
-      { action: 'open', title: 'Ouvrir' },
-      { action: 'dismiss', title: 'Fermer' },
-    ],
-  };
-  
   event.waitUntil(
     self.registration.showNotification(
       data.notification?.title || 'Pharrell Phone',
-      options
+      {
+        body: data.notification?.body || '',
+        icon: '/icons/Icon-192.png',
+        badge: '/icons/Icon-192.png',
+        vibrate: [100, 50, 100],
+        data: data.data || {},
+      }
     )
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  
   if (event.action === 'dismiss') return;
-  
   event.waitUntil(
     clients.openWindow(event.notification.data?.url || '/')
   );
 });
 
-console.log('🚀 Service Worker Pharrell Phone chargé');
+console.log('🚀 Service Worker Pharrell Phone v3 chargé');
