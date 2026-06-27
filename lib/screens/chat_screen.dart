@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_theme.dart';
+import '../widgets/app_toast.dart';
 import '../services/ai_chat_service.dart';
 import '../web_config/navigation_helper.dart';
 import '../widgets/responsive_scaffold.dart';
@@ -36,12 +37,9 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       debugPrint('Erreur chatWithAssistant: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.toString().contains('resource-exhausted')
-              ? 'Service temporairement occupé, contactez-nous sur WhatsApp.'
-              : 'Erreur de connexion, réessayez.'),
-          backgroundColor: Colors.red,
-        ));
+        AppToast.error(context, e.toString().contains('resource-exhausted')
+            ? 'Service temporairement indisponible. Contactez-nous sur WhatsApp.'
+            : 'Erreur de connexion, réessayez.');
       }
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -67,8 +65,7 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Impossible d\'ouvrir WhatsApp")));
+      if (mounted) AppToast.error(context, "Impossible d\'ouvrir WhatsApp");
     }
   }
 

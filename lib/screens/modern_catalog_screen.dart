@@ -425,29 +425,32 @@ class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
               minCardWidth = 180.0;
               cardHeight = 380.0;
             } else {
-              // Mobile : toujours 2 colonnes, hauteur fixe adaptée
+              // Mobile : 2 colonnes fixes
               maxCardWidth = 220.0;
-              minCardWidth = 160.0;
-              cardHeight = 320.0;
+              minCardWidth = 150.0;
+              // Hauteur proportionnelle à la largeur disponible
+              final approxCardWidth = (screenWidth - 16 * 2 - 10) / 2;
+              cardHeight = approxCardWidth * 1.55; // ratio portrait naturel
             }
-            
+
             final spacing = isDesktop ? 20.0 : 10.0;
             final padding = ResponsiveBreakpoints.horizontalPadding(context);
-            
-            // Calculer le nombre de colonnes optimal
+
+            // Calculer le nombre de colonnes
             final availableWidth = screenWidth - (padding * 2);
-            // Sur mobile : forcer 2 colonnes
             int crossAxisCount = ResponsiveBreakpoints.isMobile(context)
                 ? 2
                 : (availableWidth / minCardWidth).floor();
             crossAxisCount = crossAxisCount.clamp(2, 6);
-            
-            // Calculer la largeur réelle des cartes
+
+            // Largeur et ratio réels
             final totalSpacing = spacing * (crossAxisCount - 1);
             final cardWidth = (availableWidth - totalSpacing) / crossAxisCount;
-            
-            // Ratio calculé dynamiquement
-            final childAspectRatio = cardWidth / cardHeight;
+            // Sur mobile on recalcule cardHeight avec la vraie cardWidth
+            final effectiveCardHeight = ResponsiveBreakpoints.isMobile(context)
+                ? cardWidth * 1.55
+                : cardHeight;
+            final childAspectRatio = cardWidth / effectiveCardHeight;
             
             // Mode ultra-compact: basculer en liste horizontale statique
             if (!isDesktop && screenWidth <= 380) {

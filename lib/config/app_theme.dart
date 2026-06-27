@@ -125,7 +125,7 @@ class AppTheme {
     
     // Card
     cardTheme: CardThemeData(
-      color: Colors.white,
+      color: const Color(0xFFFCFAFF), // blanc légèrement teinté violet
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),

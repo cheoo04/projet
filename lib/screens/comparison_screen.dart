@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -71,7 +72,9 @@ class _AiAnalysis {
 // ── Écran principal ────────────────────────────────────────────────────────
 
 class ComparisonScreen extends StatefulWidget {
-  const ComparisonScreen({Key? key}) : super(key: key);
+  /// Si true : affiché dans un bottom sheet (pas de AppBar propre, fond transparent)
+  final bool embeddedInSheet;
+  const ComparisonScreen({Key? key, this.embeddedInSheet = false}) : super(key: key);
 
   @override
   State<ComparisonScreen> createState() => _ComparisonScreenState();
@@ -184,15 +187,33 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (_isLoading) {
+      return widget.embeddedInSheet
+          ? const Center(child: CircularProgressIndicator())
+          : const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     if (_products.isEmpty) {
-      return ResponsiveScaffold(
-        appBar: AppBar(title: const Text('Comparer')),
-        body: const Center(child: Text('Aucun produit à comparer')),
+      final emptyBody = Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.compare_arrows, size: 48, color: Colors.grey.shade400),
+          const SizedBox(height: 12),
+          const Text('Aucun produit à comparer',
+              style: TextStyle(fontSize: 16, color: Colors.grey)),
+        ]),
       );
+      return widget.embeddedInSheet
+          ? emptyBody
+          : ResponsiveScaffold(
+              appBar: AppBar(title: const Text('Comparer')),
+              body: emptyBody);
     }
 
     final specLabels = _allSpecLabels;
+
+    // En mode sheet : pas de PopScope ni AppBar (géré par le sheet)
+    if (widget.embeddedInSheet) {
+      return _buildContent(specLabels);
+    }
 
     return PopScope(
       canPop: false,
@@ -310,6 +331,122 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
         ),
       ),
     ),
+    );
+  }
+
+  /// Contenu partagé entre le mode normal et le mode sheet
+  Widget _buildContent(List<String> specLabels) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // En-tête sheet : titre + bouton effacer
+          if (widget.embeddedInSheet)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              child: Row(children: [
+                const Expanded(
+                  child: Text('Comparer',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+                TextButton(
+                  onPressed: () {
+                    context.read<ComparisonProvider>().clear();
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('Effacer',
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                ),
+              ]),
+            ),
+
+          // Tableau specs
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Table(
+              defaultColumnWidth: const FixedColumnWidth(170),
+              border: TableBorder.symmetric(
+                  inside: BorderSide(color: Colors.grey.shade200)),
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: Colors.grey.shade50),
+                  children: _products.map((p) => _headerCell(p)).toList(),
+                ),
+                _specRow(
+                  label: 'Prix',
+                  cells: _products.map((p) {
+                    final hasPromo = p.originalPrice != null && p.originalPrice! > p.price;
+                    return Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text('${p.price.toStringAsFixed(0)} FCFA',
+                          style: TextStyle(fontWeight: FontWeight.bold,
+                              fontSize: 15, color: AppTheme.primaryViolet)),
+                      if (hasPromo)
+                        Text('${p.originalPrice!.toStringAsFixed(0)} FCFA',
+                            style: const TextStyle(fontSize: 11,
+                                decoration: TextDecoration.lineThrough, color: Colors.grey)),
+                    ]);
+                  }).toList(),
+                  winnerIndex: _winnerIndexForPrice(),
+                  winnerColor: const Color(0xFFFFF3E0),
+                  winnerBorder: const Color(0xFFFF9800),
+                  winnerLabel: 'Prix le plus bas',
+                  winnerLabelColor: const Color(0xFFE65100),
+                  isEven: false,
+                ),
+                _specRow(
+                  label: 'Disponibilité',
+                  cells: _products.map((p) {
+                    final ok = p.isInStock && p.stock > 0;
+                    return Row(mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min, children: [
+                      Icon(ok ? Icons.check_circle : Icons.cancel,
+                          size: 16, color: ok ? Colors.green : Colors.red),
+                      const SizedBox(width: 4),
+                      Text(ok ? '${p.stock} en stock' : 'Rupture',
+                          style: TextStyle(fontSize: 12,
+                              color: ok ? Colors.green.shade700 : Colors.red,
+                              fontWeight: FontWeight.w500)),
+                    ]);
+                  }).toList(),
+                  winnerIndex: null,
+                  isEven: true,
+                ),
+                for (int i = 0; i < specLabels.length; i++)
+                  _specRow(
+                    label: specLabels[i],
+                    cells: _products.map((p) {
+                      final val = _specValueFor(p, specLabels[i]);
+                      return Text(val ?? '—', textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 13,
+                              fontWeight: val != null ? FontWeight.w500 : FontWeight.normal,
+                              color: val != null ? Colors.black87 : Colors.grey.shade400));
+                    }).toList(),
+                    winnerIndex: _lowerIsBetter.contains(specLabels[i].toLowerCase())
+                        ? _winnerIndexForSpec(specLabels[i], lowerIsBetter: true)
+                        : _higherIsBetter.contains(specLabels[i].toLowerCase())
+                            ? _winnerIndexForSpec(specLabels[i])
+                            : null,
+                    isEven: (i + 2).isEven,
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _AiSection(
+              productCount: _products.length,
+              products: _products,
+              analysis: _aiAnalysis,
+              rawFallback: _aiRawFallback,
+              isAnalyzing: _isAnalyzing,
+              error: _analysisError,
+              onRequest: _requestAnalysis,
+            ),
+          ),
+          const SizedBox(height: 40),
+        ],
+      ),
     );
   }
 
@@ -438,7 +575,7 @@ class _AiSection extends StatelessWidget {
             child: const Icon(Icons.auto_awesome, size: 16, color: Colors.white),
           ),
           const SizedBox(width: 10),
-          const Text('Analyse de l\'assistant',
+          const Text('Notre analyse',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
         ]),
         const SizedBox(height: 16),
@@ -554,7 +691,7 @@ class _AiSection extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       // ── Points forts ────────────────────────────────────────────
       if (a.strengths.isNotEmpty) ...[
-        _sectionTitle('Points forts', Icons.star_outline, Colors.amber.shade700),
+        _sectionTitle('Points forts', Icons.star_outline, AppTheme.primaryViolet),
         const SizedBox(height: 10),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -622,14 +759,14 @@ class _AiSection extends StatelessWidget {
       margin: const EdgeInsets.only(right: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.amber.shade50,
+        color: AppTheme.primaryViolet.withOpacity(0.07),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.shade200),
+        border: Border.all(color: AppTheme.primaryViolet.withOpacity(0.2)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(s.name,
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13,
-                color: Colors.amber.shade900)),
+                color: AppTheme.primaryViolet)),
         const SizedBox(height: 8),
         ...s.points.map((p) => Padding(
           padding: const EdgeInsets.only(bottom: 6),
@@ -638,11 +775,11 @@ class _AiSection extends StatelessWidget {
               padding: const EdgeInsets.only(top: 5, right: 6),
               child: Container(width: 5, height: 5,
                   decoration: BoxDecoration(
-                      color: Colors.amber.shade600, shape: BoxShape.circle)),
+                      color: AppTheme.primaryViolet, shape: BoxShape.circle)),
             ),
             Expanded(child: Text(p,
                 style: TextStyle(fontSize: 12, height: 1.4,
-                    color: Colors.amber.shade900))),
+                    color: Colors.black87))),
           ]),
         )),
       ]),
@@ -714,16 +851,12 @@ class _AddToCartButtonState extends State<_AddToCartButton> {
   void _addToCart() {
     context.read<CartProvider>().addItem(widget.product);
     setState(() => _added = true);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('${widget.product.name} ajouté au panier'),
-      duration: const Duration(seconds: 2),
-      backgroundColor: Colors.green.shade700,
-      action: SnackBarAction(
-        label: 'Voir le panier',
-        textColor: Colors.white,
-        onPressed: () => AppNavigator.push(context, AppNavigator.cartRoute),
-      ),
-    ));
+    AppToast.success(
+      context,
+      '${widget.product.name} ajouté au panier',
+      actionLabel: 'PANIER',
+      onAction: () => AppNavigator.push(context, AppNavigator.cartRoute),
+    );
     // Réinitialiser l'état après 3s pour permettre de ré-ajouter
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) setState(() => _added = false);

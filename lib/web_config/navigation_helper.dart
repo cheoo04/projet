@@ -2,25 +2,57 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Helper de navigation cross-platform
-/// Utilise go_router sur web (URLs propres) et Navigator sur mobile
+/// Routes "principales" qui doivent changer l'URL du navigateur.
+/// Toutes les autres restent en push (pas de changement d'URL).
+const _urlRoutes = {
+  '/',
+  '/catalog',
+  '/cart',
+  '/auth',
+  '/account',
+  '/my-orders',
+  '/chat',
+  '/onboarding',
+};
+
+/// Helper de navigation cross-platform.
+///
+/// Sur le WEB :
+///   - Routes "principales" (_urlRoutes) → context.go()  → URL change dans la barre
+///   - Autres routes (fiche produit, sécurité, aide…) → context.push() → URL change
+///     aussi avec GoRouter mais on peut revenir avec le bouton ←
+///   - pushReplacement → context.pushReplacement()
+///
+/// Sur MOBILE :
+///   - push → Navigator.pushNamed
+///   - go   → Navigator.pushNamedAndRemoveUntil (vide la pile)
 class AppNavigator {
-  /// Naviguer vers une route (push)
+
+  /// Navigation principale.
+  /// Sur web : go() pour les routes URL principales, push() pour les autres.
   static void push(BuildContext context, String route, {Object? arguments}) {
     if (kIsWeb) {
-      // Sur web, utiliser go_router
-      if (arguments != null) {
-        context.push(route, extra: arguments);
+      // Routes principales → go() pour que l'URL change proprement
+      if (_urlRoutes.contains(route)) {
+        if (arguments != null) {
+          context.go(route, extra: arguments);
+        } else {
+          context.go(route);
+        }
       } else {
-        context.push(route);
+        // Fiche produit, sécurité, aide, admin, etc. → push()
+        if (arguments != null) {
+          context.push(route, extra: arguments);
+        } else {
+          context.push(route);
+        }
       }
     } else {
-      // Sur mobile, utiliser Navigator classique
       Navigator.pushNamed(context, route, arguments: arguments);
     }
   }
 
-  /// Naviguer vers une route en remplaçant la route actuelle
+  /// Remplace la route courante (pas de retour possible).
   static void pushReplacement(BuildContext context, String route, {Object? arguments}) {
     if (kIsWeb) {
       if (arguments != null) {
@@ -33,7 +65,7 @@ class AppNavigator {
     }
   }
 
-  /// Naviguer vers une route en effaçant l'historique (go)
+  /// Navigation qui efface tout l'historique (ex: logout → home).
   static void go(BuildContext context, String route, {Object? arguments}) {
     if (kIsWeb) {
       if (arguments != null) {
@@ -42,11 +74,12 @@ class AppNavigator {
         context.go(route);
       }
     } else {
-      Navigator.pushNamedAndRemoveUntil(context, route, (route) => false, arguments: arguments);
+      Navigator.pushNamedAndRemoveUntil(
+          context, route, (r) => false, arguments: arguments);
     }
   }
 
-  /// Retour arrière
+  /// Retour arrière.
   static void pop(BuildContext context, [Object? result]) {
     if (kIsWeb) {
       context.pop(result);
@@ -57,77 +90,70 @@ class AppNavigator {
 
   /// Peut-on revenir en arrière ?
   static bool canPop(BuildContext context) {
-    if (kIsWeb) {
-      return context.canPop();
-    } else {
-      return Navigator.canPop(context);
-    }
+    if (kIsWeb) return context.canPop();
+    return Navigator.canPop(context);
   }
 
-  // Routes web-friendly (mapping pour go_router)
+  // ── Constantes de routes ────────────────────────────────────────────────
   static String productDetailRoute(String productId) => '/product/$productId';
-  static const String homeRoute = '/';
-  static const String catalogRoute = '/catalog';
-  static const String cartRoute = '/cart';
-  static const String authRoute = '/auth';
-  static const String accountRoute = '/account';
-  static const String myOrdersRoute = '/my-orders';
-  static const String notificationsRoute = '/notifications';
-  static const String addressesRoute = '/addresses';
-  static const String securityRoute = '/security';
-  static const String helpRoute = '/help';
-  static const String privacyRoute = '/privacy';
-  static const String adminRoute = '/admin';
+  static const String homeRoute         = '/';
+  static const String catalogRoute      = '/catalog';
+  static const String cartRoute         = '/cart';
+  static const String authRoute         = '/auth';
+  static const String accountRoute      = '/account';
+  static const String myOrdersRoute     = '/my-orders';
+  static const String notificationsRoute= '/notifications';
+  static const String addressesRoute    = '/addresses';
+  static const String securityRoute     = '/security';
+  static const String helpRoute         = '/help';
+  static const String privacyRoute      = '/privacy';
+  static const String adminRoute        = '/admin';
   static const String adminDashboardRoute = '/admin-dashboard';
-  static const String adminLoginRoute = '/admin-login';
-  static const String onboardingRoute = '/onboarding';
-  static const String demoDataRoute = '/demo-data';
+  static const String adminLoginRoute   = '/admin-login';
+  static const String onboardingRoute   = '/onboarding';
+  static const String demoDataRoute     = '/demo-data';
+  static const String chatRoute         = '/chat';
 
-  /// Naviguer vers le catalogue avec filtre optionnel
+  // ── Méthodes spécialisées ───────────────────────────────────────────────
+
+  /// Vers le catalogue avec filtre optionnel — change l'URL.
   static void toCatalog(BuildContext context, {String? category, bool focusSearch = false}) {
     final args = <String, dynamic>{};
     if (category != null) args['category'] = category;
     if (focusSearch) args['focusSearch'] = true;
-    
-    debugPrint('🔍 AppNavigator.toCatalog - category: $category, focusSearch: $focusSearch, args: $args');
-    
+
+    debugPrint('🔍 AppNavigator.toCatalog - category: $category, '
+        'focusSearch: $focusSearch');
+
     if (args.isEmpty) {
-      push(context, catalogRoute);
+      go(context, catalogRoute);
     } else {
-      push(context, catalogRoute, arguments: args);
+      go(context, catalogRoute, arguments: args);
     }
   }
 
-  /// Naviguer vers le détail d'un produit (route spéciale avec ID)
+  /// Vers la fiche produit — change l'URL (important pour partage & SEO).
   static void toProductDetail(BuildContext context, String productId) {
     if (kIsWeb) {
-      context.push('/product/$productId');
+      context.go('/product/$productId');
     } else {
       Navigator.pushNamed(context, '/product-detail', arguments: productId);
     }
   }
 
-  /// Naviguer vers le formulaire produit (admin)
+  /// Vers le formulaire produit admin — push (pas de changement d'URL majeur).
   static Future<T?> toProductForm<T>(BuildContext context, {dynamic product}) async {
     if (kIsWeb) {
-      // Sur web, utiliser extra pour passer le produit
       return await context.push<T>('/product-form', extra: product);
     } else {
       return await Navigator.push<T>(
         context,
-        MaterialPageRoute(
-          builder: (context) {
-            // Import dynamique pour éviter les dépendances circulaires
-            return _buildProductFormScreen(product);
-          },
-        ),
+        MaterialPageRoute(builder: (_) => _buildProductFormScreen(product)),
       );
     }
   }
 
   static Widget _buildProductFormScreen(dynamic product) {
-    // Lazy import pour éviter les imports circulaires
-    // ignore: avoid_dynamic_calls
     throw UnimplementedError('Use direct import of ProductFormScreen');
   }
 }
