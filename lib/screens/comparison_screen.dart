@@ -297,6 +297,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: _AiSection(
                 productCount: _products.length,
+                products: _products,
                 analysis: _aiAnalysis,
                 rawFallback: _aiRawFallback,
                 isAnalyzing: _isAnalyzing,
@@ -406,6 +407,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
 
 class _AiSection extends StatelessWidget {
   final int productCount;
+  final List<Product> products;
   final _AiAnalysis? analysis;
   final String? rawFallback;
   final bool isAnalyzing;
@@ -414,6 +416,7 @@ class _AiSection extends StatelessWidget {
 
   const _AiSection({
     required this.productCount,
+    required this.products,
     required this.analysis,
     required this.rawFallback,
     required this.isAnalyzing,
@@ -447,7 +450,7 @@ class _AiSection extends StatelessWidget {
   Widget _buildBody(BuildContext context) {
     if (isAnalyzing) return _loadingCard();
     if (error != null) return _errorCard();
-    if (analysis != null) return _analysisCards(context);
+    if (analysis != null) return _analysisCards(context, products);
     if (rawFallback != null) return _fallbackCard();
     return _inviteCard();
   }
@@ -546,7 +549,7 @@ class _AiSection extends StatelessWidget {
     );
   }
 
-  Widget _analysisCards(BuildContext context) {
+  Widget _analysisCards(BuildContext context, List<Product> products) {
     final a = analysis!;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       // ── Points forts ────────────────────────────────────────────
@@ -567,7 +570,7 @@ class _AiSection extends StatelessWidget {
         _sectionTitle('Quel téléphone pour toi ?', Icons.emoji_events_outlined,
             AppTheme.primaryViolet),
         const SizedBox(height: 10),
-        ...a.verdict.map((v) => _verdictRow(v)),
+        ...a.verdict.map((v) => _verdictRow(v, products)),
         const SizedBox(height: 24),
       ],
 
@@ -646,7 +649,18 @@ class _AiSection extends StatelessWidget {
     );
   }
 
-  Widget _verdictRow(_VerdictItem v) {
+  Widget _verdictRow(_VerdictItem v, List<Product> products) {
+    // Retrouver le produit gagnant par son nom (correspondance partielle)
+    final winnerProduct = products.firstWhere(
+      (p) => p.name.toLowerCase().contains(v.winner.toLowerCase()) ||
+             v.winner.toLowerCase().contains(p.name.toLowerCase()),
+      orElse: () => products.first,
+    );
+    final matchFound = products.any(
+      (p) => p.name.toLowerCase().contains(v.winner.toLowerCase()) ||
+             v.winner.toLowerCase().contains(p.name.toLowerCase()),
+    );
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -655,25 +669,93 @@ class _AiSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppTheme.primaryViolet.withOpacity(0.15)),
       ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-              color: AppTheme.primaryViolet,
-              borderRadius: BorderRadius.circular(8)),
-          child: Text(v.winner,
-              style: const TextStyle(color: Colors.white, fontSize: 11,
-                  fontWeight: FontWeight.bold)),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(v.profile,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 3),
-          Text(v.reason,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade700, height: 1.4)),
-        ])),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+                color: AppTheme.primaryViolet,
+                borderRadius: BorderRadius.circular(8)),
+            child: Text(v.winner,
+                style: const TextStyle(color: Colors.white, fontSize: 11,
+                    fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(v.profile,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 3),
+            Text(v.reason,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade700, height: 1.4)),
+          ])),
+        ]),
+        if (matchFound && winnerProduct.isInStock) ...[
+          const SizedBox(height: 10),
+          _AddToCartButton(product: winnerProduct),
+        ],
       ]),
+    );
+  }
+}
+
+// ── Bouton Ajouter au panier ───────────────────────────────────────────────
+
+class _AddToCartButton extends StatefulWidget {
+  final Product product;
+  const _AddToCartButton({required this.product});
+
+  @override
+  State<_AddToCartButton> createState() => _AddToCartButtonState();
+}
+
+class _AddToCartButtonState extends State<_AddToCartButton> {
+  bool _added = false;
+
+  void _addToCart() {
+    context.read<CartProvider>().addItem(widget.product);
+    setState(() => _added = true);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('${widget.product.name} ajouté au panier'),
+      duration: const Duration(seconds: 2),
+      backgroundColor: Colors.green.shade700,
+      action: SnackBarAction(
+        label: 'Voir le panier',
+        textColor: Colors.white,
+        onPressed: () => AppNavigator.push(context, AppNavigator.cartRoute),
+      ),
+    ));
+    // Réinitialiser l'état après 3s pour permettre de ré-ajouter
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) setState(() => _added = false);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _added ? null : _addToCart,
+        icon: Icon(
+          _added ? Icons.check : Icons.add_shopping_cart,
+          size: 16,
+          color: _added ? Colors.green : AppTheme.primaryViolet,
+        ),
+        label: Text(
+          _added ? 'Ajouté !' : 'Ajouter au panier',
+          style: TextStyle(
+            fontSize: 13,
+            color: _added ? Colors.green : AppTheme.primaryViolet,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(
+            color: _added ? Colors.green : AppTheme.primaryViolet.withOpacity(0.4),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
     );
   }
 }

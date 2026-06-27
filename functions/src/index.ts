@@ -270,40 +270,111 @@ export const sendTopicNotification = functions
     }
 
     try {
-      const message: admin.messaging.Message = {
-        topic: topic,
-        notification: {
-          title: title,
-          body: body,
-          imageUrl: imageUrl,
-        },
-        data: {
-          type: type || "general",
-          entityId: entityId || "",
-          click_action: "FLUTTER_NOTIFICATION_CLICK",
-        },
-        android: {
-          priority: "high",
-        },
-        apns: {
-          payload: {
-            aps: {
-              sound: "default",
-            },
+      // Stratégie hybride : topic (mobile) + multicast tokens (web)
+      // Les topics FCM ne fonctionnent pas sur web — on envoie aux tokens
+      // directement pour les clients web, et via topic pour mobile.
+
+      let topicSuccessCount = 0;
+      let tokenSuccessCount = 0;
+      let tokenFailureCount = 0;
+
+      // 1. Envoi via topic (mobile Android/iOS)
+      try {
+        const topicMessage: admin.messaging.Message = {
+          topic: topic,
+          notification: { title, body, imageUrl },
+          data: {
+            type: type || "general",
+            entityId: entityId || "",
+            click_action: "FLUTTER_NOTIFICATION_CLICK",
           },
-        },
+          android: { priority: "high" },
+          apns: { payload: { aps: { sound: "default" } } },
+        };
+        await messaging.send(topicMessage);
+        topicSuccessCount = 1;
+      } catch (topicError) {
+        functions.logger.warn("Topic send failed (expected on web-only deployments):", topicError);
+      }
+
+      // 2. Envoi multicast aux tokens FCM web stockés dans Firestore
+      // Récupère tous les tokens des utilisateurs inscrits au topic correspondant
+      const prefKey = _topicToPrefKey(topic);
+      const usersSnap = await db.collection("users")
+        .where(prefKey, "==", true)
+        .get();
+
+      const allTokens: string[] = [];
+      for (const doc of usersSnap.docs) {
+        const tokens: string[] = doc.data().fcmTokens ?? [];
+        allTokens.push(...tokens);
+      }
+
+      // Dédupliquer et envoyer en batches de 500 (limite FCM)
+      const uniqueTokens = [...new Set(allTokens)].filter(Boolean);
+      if (uniqueTokens.length > 0) {
+        const batches: string[][] = [];
+        for (let i = 0; i < uniqueTokens.length; i += 500) {
+          batches.push(uniqueTokens.slice(i, i + 500));
+        }
+
+        for (const batch of batches) {
+          const multicastMsg: admin.messaging.MulticastMessage = {
+            tokens: batch,
+            notification: { title, body, imageUrl },
+            data: {
+              type: type || "general",
+              entityId: entityId || "",
+            },
+            webpush: {
+              notification: {
+                title,
+                body,
+                icon: "/icons/Icon-192.png",
+                badge: "/icons/Icon-192.png",
+                requireInteraction: false,
+              },
+              fcmOptions: { link: entityId ? `/${type}/${entityId}` : "/" },
+            },
+          };
+          const batchResult = await messaging.sendEachForMulticast(multicastMsg);
+          tokenSuccessCount += batchResult.successCount;
+          tokenFailureCount += batchResult.failureCount;
+        }
+      }
+
+      functions.logger.info(
+        `✅ Notification envoyée — topic: ${topicSuccessCount}, ` +
+        `tokens web: ${tokenSuccessCount} succès / ${tokenFailureCount} échecs`
+      );
+
+      return {
+        success: true,
+        topicSent: topicSuccessCount > 0,
+        tokensSent: tokenSuccessCount,
+        tokensTotal: uniqueTokens.length,
       };
-
-      const response = await messaging.send(message);
-
-      functions.logger.info(`✅ Notification topic envoyée: ${response}`);
-
-      return {success: true, messageId: response};
     } catch (error) {
-      functions.logger.error("❌ Erreur envoi topic:", error);
+      functions.logger.error("❌ Erreur envoi notification:", error);
       throw new functions.https.HttpsError("internal", String(error));
     }
   });
+
+/**
+ * Convertit un nom de topic en clé de préférence Firestore.
+ * Ex: "promotions" → "notif_promos"
+ */
+function _topicToPrefKey(topic: string): string {
+  const map: Record<string, string> = {
+    "all_users":    "notif_all",
+    "orders":       "notif_orders",
+    "promotions":   "notif_promos",
+    "new_products": "notif_new_products",
+    "price_drops":  "notif_price_drops",
+    "stock_alerts": "notif_stock",
+  };
+  return map[topic] ?? "notif_all";
+}
 
 /**
  * Cloud Function pour générer une signature Cloudinary côté serveur
@@ -713,46 +784,75 @@ function formatCatalogForAI(products: CatalogProduct[]): string {
 /**
  * Appelle Gemini et retourne le texte généré.
  */
+// Modèles Gemini par ordre de priorité (fallback automatique si quota atteint)
+const GEMINI_MODELS = [
+  "gemini-2.5-flash",   // Priorité 1 : le plus capable
+  "gemini-1.5-flash",   // Fallback 1 : quota séparé, très capable
+  "gemini-1.5-flash-8b", // Fallback 2 : modèle léger, quota large
+];
+
+/**
+ * Appelle Gemini avec fallback automatique sur les modèles alternatifs
+ * si le quota du modèle principal est atteint (HTTP 429).
+ * Chaque modèle a son propre quota indépendant.
+ */
 async function callGemini(
   apiKey: string,
   systemInstruction: string,
   contents: Array<{ role: string; parts: Array<{ text: string }> }>
 ): Promise<string> {
-  const response = await fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemInstruction }] },
-        contents,
-      }),
-    }
-  );
+  let lastError: string = "";
 
-  if (response.status === 429) {
-    throw new functions.https.HttpsError(
-      "resource-exhausted",
-      "Quota de l'assistant atteint, réessayez plus tard"
+  for (const model of GEMINI_MODELS) {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemInstruction }] },
+          contents,
+        }),
+      }
     );
-  }
-  if (!response.ok) {
-    const errText = await response.text();
-    functions.logger.error(`Erreur Gemini: ${errText}`);
-    throw new functions.https.HttpsError("internal", "Erreur de l'assistant");
+
+    // Quota atteint sur ce modèle → essayer le suivant
+    if (response.status === 429) {
+      functions.logger.warn(`Quota atteint sur ${model}, tentative sur modèle suivant...`);
+      lastError = `quota-${model}`;
+      continue;
+    }
+
+    if (!response.ok) {
+      const errText = await response.text();
+      functions.logger.error(`Erreur Gemini (${model}): ${errText}`);
+      lastError = errText;
+      continue;
+    }
+
+    const result = (await response.json()) as {
+      candidates?: Array<{
+        content?: { parts?: Array<{ text?: string }> };
+      }>;
+    };
+
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (text) {
+      if (model !== GEMINI_MODELS[0]) {
+        functions.logger.info(`Réponse fournie par le modèle de secours : ${model}`);
+      }
+      return text;
+    }
   }
 
-  const result = (await response.json()) as {
-    candidates?: Array<{
-      content?: { parts?: Array<{ text?: string }> };
-    }>;
-  };
-  return (
-    result.candidates?.[0]?.content?.parts?.[0]?.text ??
-    "Je n'ai pas pu générer de réponse, réessayez ou contactez le support."
+  // Tous les modèles épuisés
+  functions.logger.error(`Tous les modèles Gemini ont échoué. Dernière erreur: ${lastError}`);
+  throw new functions.https.HttpsError(
+    "resource-exhausted",
+    "L'assistant est temporairement indisponible. Contactez-nous via WhatsApp."
   );
 }
 
