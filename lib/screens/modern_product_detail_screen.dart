@@ -1,6 +1,7 @@
 import '../services/product_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../widgets/app_toast.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../config/app_theme.dart';
@@ -73,9 +74,17 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
         (p) => p.id == widget.productId,
         orElse: () => throw Exception('Produit non trouvé'),
       );
-      
+
       // Vérifier si le produit est en favoris
-      final isFav = await FavoritesService.isFavorite(product.id);
+      // catchError : si l'auth anonyme n'est pas encore prête au refresh,
+      // on affiche quand même le produit sans crash
+      bool isFav = false;
+      try {
+        isFav = await FavoritesService.isFavorite(product.id);
+      } catch (_) {
+        // Auth pas encore prête — pas grave, on réessaie si l'utilisateur
+        // interagit avec le bouton favoris
+      }
       
       setState(() {
         _product = product;
@@ -90,9 +99,7 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: ${e.toString()}')),
-        );
+        AppToast.error(context, 'Impossible de charger ce produit.');
       }
     }
   }

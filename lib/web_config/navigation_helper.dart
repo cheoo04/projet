@@ -4,11 +4,12 @@ import 'package:go_router/go_router.dart';
 
 /// Routes "principales" qui doivent changer l'URL du navigateur.
 /// Toutes les autres restent en push (pas de changement d'URL).
+// Routes qui utilisent go() - changent l'URL mais GARDENT la pile de navigation
+// NB: /cart intentionnellement absent - go() viderait la pile et le retour = page blanche
+// NB: /auth idem - on veut pouvoir revenir à la page précédente après login
 const _urlRoutes = {
   '/',
   '/catalog',
-  '/cart',
-  '/auth',
   '/account',
   '/my-orders',
   '/chat',

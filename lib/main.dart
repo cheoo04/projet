@@ -64,17 +64,18 @@ void main() async {
     // Initialiser les données de locale pour le formatage des dates
     await initializeDateFormatting('fr_FR', null);
 
-    // Connexion anonyme silencieuse — garantit que context.auth est toujours
-    // présent dans les Cloud Functions, même pour les visiteurs non connectés.
-    // Si l'utilisateur se connecte ensuite avec son compte, Firebase remplace
-    // la session anonyme par son vrai compte.
+    // Lancer l'app immédiatement — pas d'attente de l'auth
+    runApp(const MyApp());
+
+    // Connexion anonyme silencieuse en arrière-plan.
+    // Ne bloque pas le démarrage. Les Cloud Functions vérifient context.auth,
+    // mais le token sera prêt bien avant que l'utilisateur interagisse avec l'IA.
     final auth = FirebaseAuth.instance;
     if (auth.currentUser == null) {
-      await auth.signInAnonymously();
+      auth.signInAnonymously().catchError((e) {
+        debugPrint('⚠️ Auth anonyme échouée: $e');
+      });
     }
-
-    // Lancer l'app immédiatement
-    runApp(const MyApp());
     
     // Initialisations secondaires en arrière-plan (après le lancement de l'app)
     _initializeServicesInBackground();
