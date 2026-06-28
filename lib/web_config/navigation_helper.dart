@@ -136,7 +136,8 @@ class AppNavigator {
   /// Vers la fiche produit — change l'URL (important pour partage & SEO).
   static void toProductDetail(BuildContext context, String productId) {
     if (kIsWeb) {
-      context.go('/product/$productId');
+      // push() et non go() — on veut pouvoir revenir au catalogue avec context.pop()
+      context.push('/product/$productId');
     } else {
       Navigator.pushNamed(context, '/product-detail', arguments: productId);
     }

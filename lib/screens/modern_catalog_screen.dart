@@ -432,7 +432,7 @@ class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
               minCardWidth = 150.0;
               // Hauteur proportionnelle à la largeur disponible
               final approxCardWidth = (screenWidth - 16 * 2 - 10) / 2;
-              cardHeight = approxCardWidth * 1.55; // ratio portrait naturel
+              cardHeight = approxCardWidth * 1.38; // ratio portrait naturel
             }
 
             final spacing = isDesktop ? 20.0 : 10.0;
@@ -449,8 +449,9 @@ class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
             final totalSpacing = spacing * (crossAxisCount - 1);
             final cardWidth = (availableWidth - totalSpacing) / crossAxisCount;
             // Sur mobile on recalcule cardHeight avec la vraie cardWidth
+            // 1.38 = ratio optimal pour afficher image + nom + prix sans espace vide
             final effectiveCardHeight = ResponsiveBreakpoints.isMobile(context)
-                ? cardWidth * 1.55
+                ? cardWidth * 1.38
                 : cardHeight;
             final childAspectRatio = cardWidth / effectiveCardHeight;
             

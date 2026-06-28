@@ -25,6 +25,21 @@ import '../screens/product_form_screen.dart';
 import '../screens/demo_data_screen.dart';
 import '../services/analytics_service.dart';
 
+/// Page sans animation de swipe-back iOS — remplace NoTransitionPage
+/// pour éviter l'effet de double-écran causé par le conflit entre
+/// l'animation native iOS et l'absence de transition Flutter.
+class _FadeRootPage<T> extends CustomTransitionPage<T> {
+  const _FadeRootPage({required super.child, super.key, super.name})
+      : super(
+          transitionDuration: const Duration(milliseconds: 180),
+          reverseTransitionDuration: const Duration(milliseconds: 180),
+          transitionsBuilder: _buildFade,
+        );
+
+  static Widget _buildFade(context, animation, _, child) =>
+      FadeTransition(opacity: animation, child: child);
+}
+
 /// Configuration du routeur GoRouter pour le support web
 /// Utilise des URLs propres sans hash (#) pour le SEO
 class WebRouter {
@@ -71,9 +86,7 @@ class WebRouter {
           path: '/',
           name: 'home',
           // NoTransitionPage : pas d'animation iOS swipe-back (pile vide)
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: ModernHomeScreen(),
-          ),
+          pageBuilder: (context, state) => const _FadeRootPage(child: ModernHomeScreen()),
         ),
         
         // Onboarding (optionnel sur web)
@@ -102,7 +115,7 @@ class WebRouter {
             
             debugPrint('🔍 WebRouter /catalog - extra: $extra, category: $category, searchQuery: $searchQuery, focusSearch: $focusSearch');
             
-            return NoTransitionPage(
+            return _FadeRootPage(
               child: ModernCatalogScreen(
                 initialCategory: category,
                 initialSearchQuery: searchQuery,
@@ -150,7 +163,7 @@ class WebRouter {
         GoRoute(
           path: '/chat',
           name: 'chat',
-          pageBuilder: (context, state) => const NoTransitionPage(child: ChatScreen()),
+          pageBuilder: (context, state) => const _FadeRootPage(child: ChatScreen()),
         ),
         
         // Authentification
@@ -164,16 +177,14 @@ class WebRouter {
         GoRoute(
           path: '/account',
           name: 'account',
-          pageBuilder: (context, state) => const NoTransitionPage(
-            child: AccountScreen(),
-          ),
+          pageBuilder: (context, state) => const _FadeRootPage(child: AccountScreen()),
         ),
         
         // Mes commandes
         GoRoute(
           path: '/my-orders',
           name: 'my_orders',
-          pageBuilder: (context, state) => const NoTransitionPage(child: MyOrdersScreen()),
+          pageBuilder: (context, state) => const _FadeRootPage(child: MyOrdersScreen()),
         ),
         
         // Notifications
