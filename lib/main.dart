@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
@@ -39,6 +40,11 @@ import 'services/app_init_service.dart';
 import 'web_config/web_router.dart';
 
 void main() async {
+  // URLs propres sans # sur le web
+  if (kIsWeb) {
+    GoRouter.optionURLReflectsImperativeAPIs = true;
+    usePathUrlStrategy();
+  }
   // Préserver le splash natif pendant l'initialisation (mobile uniquement)
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   

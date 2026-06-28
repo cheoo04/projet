@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import '../web_config/responsive_config.dart';
-import 'desktop_header.dart';
 
-/// Wrapper qui ajoute automatiquement le DesktopHeader sur desktop
-/// et garde le contenu tel quel sur mobile/tablette
+/// Wrapper responsive pour les écrans de l'app.
+/// 
+/// Le DesktopHeader est géré par AppShell (StatefulShellRoute) — 
+/// ResponsiveScaffold ne l'affiche plus pour éviter les doublons.
+/// Sur desktop, le contenu est centré avec maxWidth.
 class ResponsiveScaffold extends StatelessWidget {
   final Widget body;
   final PreferredSizeWidget? appBar;
   final Widget? bottomNavigationBar;
   final Widget? floatingActionButton;
   final Color? backgroundColor;
+  // Conservé pour compatibilité avec les appels existants, mais ignoré
+  // ignore: unused_field
   final bool showDesktopHeader;
 
   const ResponsiveScaffold({
@@ -19,39 +23,31 @@ class ResponsiveScaffold extends StatelessWidget {
     this.bottomNavigationBar,
     this.floatingActionButton,
     this.backgroundColor,
-    this.showDesktopHeader = true,
+    this.showDesktopHeader = true, // ignoré — AppShell gère le header
   });
 
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
-    
-    // Sur desktop, ajouter le DesktopHeader
-    if (isDesktop && showDesktopHeader) {
+
+    if (isDesktop) {
+      // Sur desktop : centrer le contenu avec maxWidth, sans header (AppShell s'en charge)
       return Scaffold(
         backgroundColor: backgroundColor,
         floatingActionButton: floatingActionButton,
-        // Affiche aussi la barre d'actions en bas sur desktop
         bottomNavigationBar: bottomNavigationBar,
-        body: Column(
-          children: [
-            const DesktopHeader(),
-            Expanded(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: ResponsiveBreakpoints.maxContentWidth(context),
-                  ),
-                  child: body,
-                ),
-              ),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: ResponsiveBreakpoints.maxContentWidth(context),
             ),
-          ],
+            child: body,
+          ),
         ),
       );
     }
-    
-    // Sur mobile/tablette, utiliser le scaffold normal
+
+    // Sur mobile/tablette : scaffold standard
     return Scaffold(
       backgroundColor: backgroundColor,
       appBar: appBar,
