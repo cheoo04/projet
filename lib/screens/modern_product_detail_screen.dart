@@ -60,52 +60,42 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
     _subscribeToProductStream();
   }
   
-  /// Charger le produit depuis Firestore
+  /// Charger le produit depuis Firestore directement par ID
   Future<void> _loadProduct() async {
     try {
-      final productProvider = Provider.of<ProductProvider>(context, listen: false);
-      
-      // Si les produits ne sont pas chargés, les charger
-      if (productProvider.products.isEmpty) {
-        await productProvider.loadProducts();
-      }
-      
-      // Trouver le produit
-      final product = productProvider.products.firstWhere(
-        (p) => p.id == widget.productId,
-        orElse: () => throw Exception('Produit non trouvé'),
-      );
+      // Charger directement depuis Firestore par ID — évite la dépendance
+      // au ProductProvider qui peut être vide au premier chargement par URL
+      final products = await ProductService().getByIds([widget.productId]);
 
-      // Vérifier si le produit est en favoris
-      // catchError : si l'auth anonyme n'est pas encore prête au refresh,
-      // on affiche quand même le produit sans crash
+      if (!mounted) return;
+
+      if (products.isEmpty) {
+        // Laisser le stream continuer — s'il ne trouve rien non plus,
+        // l'état d'erreur sera affiché après un délai
+        return;
+      }
+
+      final product = products.first;
+
       bool isFav = false;
       try {
         isFav = await FavoritesService.isFavorite(product.id);
-      } catch (_) {
-        // Auth pas encore prête — pas grave, on réessaie si l'utilisateur
-        // interagit avec le bouton favoris
-      }
-      
+      } catch (_) {}
+
+      if (!mounted) return;
       setState(() {
         _product = product;
         _isFavorite = isFav;
         _isLoading = false;
       });
-      
-      // Charger les avis depuis Firestore
+
       _loadReviews();
     } catch (e) {
-      if (mounted) {
-        // Ne passer en état d'erreur que si le stream n'a pas déjà
-        // fourni le produit entre-temps
-        if (_product == null) {
-          setState(() {
-            _isLoading = false;
-          });
-          AppToast.error(context, 'Impossible de charger ce produit.');
-        }
-      }
+      if (!mounted) return;
+      // Si le stream a déjà fourni le produit, ignorer silencieusement
+      if (_product != null) return;
+      setState(() => _isLoading = false);
+      AppToast.error(context, 'Impossible de charger ce produit.');
     }
   }
   
@@ -136,8 +126,16 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
   }
 
   void _subscribeToProductStream() {
-    // Cancel existing
     _productSub?.cancel();
+    
+    // Timeout : si après 10s le stream n'a rien émis, afficher erreur
+    Future.delayed(const Duration(seconds: 10), () {
+      if (mounted && _product == null && _isLoading) {
+        setState(() => _isLoading = false);
+        if (mounted) AppToast.error(context, 'Impossible de charger ce produit.');
+      }
+    });
+
     _productSub = ProductService()
         .getProductStream(widget.productId)
         .listen((updatedProduct) {
