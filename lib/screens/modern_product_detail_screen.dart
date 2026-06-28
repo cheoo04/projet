@@ -96,11 +96,15 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
       // Charger les avis depuis Firestore
       _loadReviews();
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
       if (mounted) {
-        AppToast.error(context, 'Impossible de charger ce produit.');
+        // Ne passer en état d'erreur que si le stream n'a pas déjà
+        // fourni le produit entre-temps
+        if (_product == null) {
+          setState(() {
+            _isLoading = false;
+          });
+          AppToast.error(context, 'Impossible de charger ce produit.');
+        }
       }
     }
   }
@@ -139,8 +143,8 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
         .listen((updatedProduct) {
       if (!mounted) return;
       setState(() {
-        // Merge critical runtime fields if necessary
         _product = updatedProduct;
+        _isLoading = false; // stream a fourni le produit
       });
     }, onError: (err) {
       debugPrint('Erreur stream produit: $err');
