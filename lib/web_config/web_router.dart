@@ -70,7 +70,10 @@ class WebRouter {
         GoRoute(
           path: '/',
           name: 'home',
-          builder: (context, state) => const ModernHomeScreen(),
+          // NoTransitionPage : pas d'animation iOS swipe-back (pile vide)
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: ModernHomeScreen(),
+          ),
         ),
         
         // Onboarding (optionnel sur web)
@@ -84,8 +87,8 @@ class WebRouter {
         GoRoute(
           path: '/catalog',
           name: 'catalog',
-          builder: (context, state) {
-            // Récupérer les arguments passés via extra
+          // NoTransitionPage : pas d'animation iOS swipe-back (pile vide après go())
+          pageBuilder: (context, state) {
             final extra = state.extra;
             String? category;
             String? searchQuery;
@@ -99,10 +102,12 @@ class WebRouter {
             
             debugPrint('🔍 WebRouter /catalog - extra: $extra, category: $category, searchQuery: $searchQuery, focusSearch: $focusSearch');
             
-            return ModernCatalogScreen(
-              initialCategory: category,
-              initialSearchQuery: searchQuery,
-              initialFocusSearch: focusSearch,
+            return NoTransitionPage(
+              child: ModernCatalogScreen(
+                initialCategory: category,
+                initialSearchQuery: searchQuery,
+                initialFocusSearch: focusSearch,
+              ),
             );
           },
         ),
@@ -145,7 +150,7 @@ class WebRouter {
         GoRoute(
           path: '/chat',
           name: 'chat',
-          builder: (context, state) => const ChatScreen(),
+          pageBuilder: (context, state) => const NoTransitionPage(child: ChatScreen()),
         ),
         
         // Authentification
@@ -159,14 +164,16 @@ class WebRouter {
         GoRoute(
           path: '/account',
           name: 'account',
-          builder: (context, state) => const AccountScreen(),
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: AccountScreen(),
+          ),
         ),
         
         // Mes commandes
         GoRoute(
           path: '/my-orders',
           name: 'my_orders',
-          builder: (context, state) => const MyOrdersScreen(),
+          pageBuilder: (context, state) => const NoTransitionPage(child: MyOrdersScreen()),
         ),
         
         // Notifications

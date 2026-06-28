@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../models/product.dart';
@@ -225,11 +226,12 @@ class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
           // Titre et icônes
           Row(
             children: [
-              // Bouton retour
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pop(context),
-              ),
+              // Bouton retour — affiché seulement si on peut revenir en arrière
+              if (context.canPop())
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => context.pop(),
+                ),
               
               // Titre
               Expanded(
