@@ -1,23 +1,25 @@
 {{flutter_js}}
 {{flutter_build_config}}
 
-// Masque le splash avec un fondu doux
+// Masque le splash avec fondu doux
 function hideSplash() {
-  var splash = document.getElementById('pharrell-splash');
-  if (!splash || splash._hidden) return;
-  splash._hidden = true;
-  splash.style.transition = 'opacity 0.4s ease';
-  splash.style.opacity = '0';
-  setTimeout(function() {
-    if (splash.parentNode) splash.parentNode.removeChild(splash);
-  }, 420);
+  var el = document.getElementById('pharrell-splash');
+  if (!el || el._hidden) return;
+  el._hidden = true;
+  el.style.transition = 'opacity 0.45s ease';
+  el.style.opacity = '0';
+  setTimeout(function() { el.remove(); }, 480);
 }
 
+// Timeout de sécurité : si Flutter met > 30s, on cache quand même le splash
+// pour ne pas bloquer l'utilisateur indéfiniment
+setTimeout(hideSplash, 30000);
+
+// Démarrer Flutter immédiatement — sans attendre window.load
+// C'est la clé : ne pas bloquer sur les scripts Firebase async
 _flutter.loader.load({
   onEntrypointLoaded: async function(engineInitializer) {
-    // Moteur Flutter chargé → initialise
     const appRunner = await engineInitializer.initializeEngine();
-    // App prête → cache le splash exactement maintenant
     hideSplash();
     await appRunner.runApp();
   }
