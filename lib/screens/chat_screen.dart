@@ -72,12 +72,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     _scrollToBottom();
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) context.pop();
-      },
-      child: ResponsiveScaffold(
+    return ResponsiveScaffold(
         appBar: AppBar(
           title: const Text('Assistant Pharrell Phone'),
         actions: [
@@ -169,7 +164,6 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ],
       ),
-    ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -184,7 +185,7 @@ class _AccountScreenState extends State<AccountScreen> {
               
               // Continuer sans compte
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => context.pop(),
                 child: Text(
                   'Continuer sans compte',
                   style: TextStyle(
@@ -876,7 +877,7 @@ class _AccountScreenState extends State<AccountScreen> {
                         child: SizedBox(
                           height: 52,
                           child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () => context.pop(),
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(color: Colors.grey.shade400),
                               shape: RoundedRectangleBorder(
@@ -949,7 +950,7 @@ class _AccountScreenState extends State<AccountScreen> {
                                 
                                 // Fermer le modal
                                 if (context.mounted) {
-                                  Navigator.pop(context);
+                                  context.pop();
                                 }
                                 
                                 if (mounted) {
@@ -1239,7 +1240,7 @@ class _AccountScreenState extends State<AccountScreen> {
                             const SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: () {
-                                Navigator.pop(context);
+                                context.pop();
                                 productProvider.loadProducts().then((_) {
                                   _showFavorites(context);
                                 });
@@ -1273,7 +1274,7 @@ class _AccountScreenState extends State<AccountScreen> {
                           ),
                           child: InkWell(
                             onTap: () {
-                              Navigator.pop(context);
+                              context.pop();
                               AppNavigator.toProductDetail(context, product.id);
                             },
                             borderRadius: BorderRadius.circular(16),
@@ -1344,7 +1345,7 @@ class _AccountScreenState extends State<AccountScreen> {
                                     icon: const Icon(Icons.favorite, color: Colors.red, size: 28),
                                     onPressed: () async {
                                       await FavoritesService.removeFavorite(product.id);
-                                      Navigator.pop(context);
+                                      context.pop();
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
                                           content: Text('${product.name} retiré des favoris'),

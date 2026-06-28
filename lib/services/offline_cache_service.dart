@@ -55,9 +55,9 @@ class OfflineCacheService {
 
   // Surveiller la connectivité réseau
   void _initializeConnectivityMonitoring() {
-    Connectivity().onConnectivityChanged.listen((ConnectivityResult result) {
+    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
       final wasOnline = _isOnline;
-      _isOnline = result != ConnectivityResult.none;
+      _isOnline = results.any((r) => r != ConnectivityResult.none);
 
       if (!wasOnline && _isOnline) {
         LoggingService.info('Connexion rétablie - Synchronisation...');

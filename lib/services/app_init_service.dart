@@ -36,8 +36,8 @@ class AppInitService {
     
     try {
       // Vérifier la connectivité
-      final connectivity = await Connectivity().checkConnectivity();
-      final hasInternet = _hasInternetConnection(connectivity);
+      final connectivityList = await Connectivity().checkConnectivity();
+      final hasInternet = _hasInternetConnectionList(connectivityList);
       
       if (!hasInternet) {
         print('⚠️ Pas de connexion internet - Retry annulé');
@@ -63,7 +63,7 @@ class AppInitService {
   }
   
   /// Écoute les changements de connectivité et retente si nécessaire
-  static StreamSubscription<ConnectivityResult>? _connectivitySubscription;
+  static StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   
   /// Vérifie si le résultat de connectivité indique une connexion internet
   static bool _hasInternetConnection(ConnectivityResult result) {
@@ -71,11 +71,17 @@ class AppInitService {
            result == ConnectivityResult.mobile ||
            result == ConnectivityResult.ethernet;
   }
+
+  static bool _hasInternetConnectionList(List<ConnectivityResult> results) {
+    return results.any((r) => r == ConnectivityResult.wifi ||
+                              r == ConnectivityResult.mobile ||
+                              r == ConnectivityResult.ethernet);
+  }
   
   static void startConnectivityListener() {
     _connectivitySubscription?.cancel();
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((result) {
-      final hasInternet = _hasInternetConnection(result);
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
+      final hasInternet = _hasInternetConnectionList(results);
       
       if (hasInternet && _auth.currentUser == null) {
         print('🌐 Connexion rétablie - Tentative d\'authentification...');

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -395,7 +396,7 @@ class _ModernCartScreenState extends State<ModernCartScreen> {
                     text: 'Continuer',
                     height: 56,
                     onPressed: () {
-                      Navigator.pop(context);
+                      context.pop();
                     },
                   ),
                 ),
@@ -601,14 +602,14 @@ class _ModernCartScreenState extends State<ModernCartScreen> {
             content: const Text('Votre commande a été envoyée sur WhatsApp. Voulez-vous vider le panier ?'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => context.pop(),
                 child: const Text('Non'),
               ),
               ElevatedButton(
                 onPressed: () {
                   cart.clearCart();
-                  Navigator.pop(context);
-                  Navigator.pop(context);
+                  context.pop();
+                  context.pop();
                 },
                 child: const Text('Oui'),
               ),

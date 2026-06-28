@@ -1,6 +1,7 @@
 import '../services/product_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/app_toast.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -250,7 +251,7 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
               const Text('Produit introuvable'),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => context.pop(),
                 child: const Text('Retour'),
               ),
             ],
@@ -351,7 +352,7 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
           ),
           child: const Icon(Icons.arrow_back, color: Colors.white),
         ),
-        onPressed: () => Navigator.pop(context),
+        onPressed: () => context.pop(),
       ),
       actions: [
         // Bouton Favoris

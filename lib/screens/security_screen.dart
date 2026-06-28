@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../config/app_theme.dart';
 import '../services/auth_service.dart';
@@ -466,7 +467,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                       await user.reauthenticateWithCredential(credential);
                       await user.updatePassword(newPasswordController.text);
                       
-                      Navigator.pop(context);
+                      context.pop();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Row(
@@ -589,7 +590,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                     child: SizedBox(
                       height: 50,
                       child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => context.pop(),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: AppTheme.primaryViolet),
                           shape: RoundedRectangleBorder(
@@ -661,7 +662,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                             // Lier le provider email/password au compte
                             await user.linkWithCredential(credential);
                             
-                            Navigator.pop(context);
+                            context.pop();
                             setState(() {}); // Refresh UI
                             
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -846,7 +847,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                             if (codeSent) {
                               setModalState(() => codeSent = false);
                             } else {
-                              Navigator.pop(context);
+                              context.pop();
                             }
                           },
                           style: OutlinedButton.styleFrom(
@@ -906,7 +907,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                                   // Auto-vérification sur Android
                                   try {
                                     await FirebaseAuth.instance.currentUser?.linkWithCredential(credential);
-                                    Navigator.pop(context);
+                                    context.pop();
                                     setState(() {});
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -992,7 +993,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                                 
                                 await FirebaseAuth.instance.currentUser?.linkWithCredential(credential);
                                 
-                                Navigator.pop(context);
+                                context.pop();
                                 setState(() {});
                                 
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1190,7 +1191,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             style: TextButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             ),
@@ -1202,7 +1203,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                 await FirebaseAuth.instance.currentUser?.delete();
                 Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
               } catch (e) {
-                Navigator.pop(context);
+                context.pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Row(

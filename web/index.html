@@ -134,43 +134,13 @@
       margin-bottom: 32px;
     }
 
-    /* Barre de progression */
-    .splash-progress-wrap {
-      width: 180px;
-      height: 3px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-top: 8px;
+    /* Pulse subtil sur le logo — seul indicateur de chargement */
+    @keyframes logoPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.85; transform: scale(0.97); }
     }
-    .splash-progress-bar {
-      height: 100%;
-      width: 0%;
-      background: white;
-      border-radius: 2px;
-      transition: width 0.4s ease;
-    }
-
-    .splash-loading-text {
-      color: rgba(255, 255, 255, 0.6);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 11px;
-      margin-top: 10px;
-    }
-
-    /* Spinner compact */
-    .splash-spinner {
-      width: 22px;
-      height: 22px;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin-bottom: 10px;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    .splash-logo {
+      animation: logoPulse 2s ease-in-out infinite !important;
     }
   </style>
 </head>
@@ -182,74 +152,13 @@
     </div>
     <div class="splash-title">Pharrell Phone</div>
     <div class="splash-subtitle">Qualité supérieure / Satisfaction garantie</div>
-    <div class="splash-spinner"></div>
-    <div class="splash-progress-wrap">
-      <div class="splash-progress-bar" id="splash-progress"></div>
-    </div>
-    <div class="splash-loading-text" id="splash-status">Chargement de l'application…</div>
+    <!-- Rien d'autre — le logo pulse suffit -->
   </div>
 
   <script>
-    var _splashHidden = false;
-
-    function hideSplash() {
-      if (_splashHidden) return;
-      _splashHidden = true;
-      const splash = document.getElementById('pharrell-splash');
-      if (splash) {
-        splash.classList.add('hidden');
-        setTimeout(function() {
-          splash.remove();
-          document.body.style.background = '#F8F5FC';
-        }, 350);
-      }
-    }
-
-    // Barre de progression simulée — donne du feedback visuel pendant le chargement JS
-    var _progress = 0;
-    var _progressInterval = null;
-
-    function startProgress() {
-      var bar = document.getElementById('splash-progress');
-      var status = document.getElementById('splash-status');
-      if (!bar) return;
-
-      // Progression rapide jusqu'à 70%, puis ralentit (attend Flutter)
-      _progressInterval = setInterval(function() {
-        if (_progress < 30) {
-          _progress += 3;
-          if (status) status.textContent = 'Initialisation…';
-        } else if (_progress < 60) {
-          _progress += 1.5;
-          if (status) status.textContent = 'Chargement des données…';
-        } else if (_progress < 85) {
-          _progress += 0.5;
-          if (status) status.textContent = 'Presque prêt…';
-        }
-        // S'arrête à 85% — Flutter complète jusqu'à 100% quand il est prêt
-        if (_progress >= 85) clearInterval(_progressInterval);
-        bar.style.width = _progress + '%';
-      }, 120);
-    }
-
-    function completeProgress() {
-      clearInterval(_progressInterval);
-      var bar = document.getElementById('splash-progress');
-      if (bar) bar.style.width = '100%';
-      setTimeout(hideSplash, 250);
-    }
-
-    // Observer quand Flutter est prêt
-    var _flutterObserver = new MutationObserver(function(mutations) {
-      if (document.querySelector('flt-glass-pane') || document.querySelector('flutter-view')) {
-        completeProgress();
-        fixFlutterViewport();
-        _flutterObserver.disconnect();
-      }
-    });
-    _flutterObserver.observe(document.body, { childList: true, subtree: true });
-
-    // Corriger le viewport Flutter (désactive le zoom forcé)
+    // Le splash se cache via flutter_bootstrap.js au moment exact
+    // où Flutter a fini d'initialiser son moteur — pas de timeout arbitraire.
+    // Correction viewport Flutter (désactive zoom forcé)
     function fixFlutterViewport() {
       document.querySelectorAll('meta[name="viewport"]').forEach(function(v) {
         var c = v.getAttribute('content') || '';
@@ -258,40 +167,16 @@
         }
       });
     }
-
-    // Observer les changements de viewport
-    var _headObserver = new MutationObserver(function(mutations) {
-      mutations.forEach(function(m) {
+    var _ho = new MutationObserver(function(ms) {
+      ms.forEach(function(m) {
         if (m.addedNodes) m.addedNodes.forEach(function(n) {
-          if (n.nodeName === 'META' && n.getAttribute('name') === 'viewport')
-            setTimeout(fixFlutterViewport, 100);
+          if (n.nodeName==='META' && n.getAttribute('name')==='viewport') setTimeout(fixFlutterViewport,100);
         });
-        if (m.type === 'attributes' && m.attributeName === 'content' &&
-            m.target.getAttribute('name') === 'viewport') fixFlutterViewport();
+        if (m.type==='attributes' && m.attributeName==='content' && m.target.getAttribute('name')==='viewport') fixFlutterViewport();
       });
     });
-    _headObserver.observe(document.head, { childList: true, subtree: true,
-        attributes: true, attributeFilter: ['content'] });
+    _ho.observe(document.head, {childList:true, subtree:true, attributes:true, attributeFilter:['content']});
     setTimeout(fixFlutterViewport, 500);
-
-    // Timeout de sécurité absolu : 25s (connexions très lentes)
-    // Le splash reste visible PENDANT tout le chargement — pas de page blanche
-    setTimeout(hideSplash, 25000);
-
-    // Démarrer la barre de progression immédiatement
-    startProgress();
-
-    // Service worker (cache le JS pour les prochaines visites → beaucoup plus rapide)
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('/custom-service-worker.js')
-          .then(function(reg) {
-            // Forcer la mise à jour du SW si une nouvelle version est disponible
-            reg.update();
-          })
-          .catch(function() {});
-      });
-    }
   </script>
 
   <!-- Flutter bootstrap -->

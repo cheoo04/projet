@@ -215,12 +215,7 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
       return _buildContent(specLabels);
     }
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) context.pop();
-      },
-      child: ResponsiveScaffold(
+    return ResponsiveScaffold(
         appBar: AppBar(
           title: const Text('Comparer'),
           actions: [
@@ -330,7 +325,6 @@ class _ComparisonScreenState extends State<ComparisonScreen> {
           ],
         ),
       ),
-    ),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../config/app_theme.dart';
 import '../services/auth_service.dart';
@@ -142,7 +143,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
           Align(
             alignment: Alignment.centerLeft,
             child: IconButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => context.pop(),
               icon: const Icon(Icons.arrow_back),
             ),
           ),
@@ -747,7 +748,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
               
               // Bouton Annuler
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => context.pop(),
                 child: Text(
                   'Annuler',
                   style: TextStyle(color: Colors.grey.shade600),
@@ -884,7 +885,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => context.pop(),
             child: const Text('Annuler'),
           ),
           ElevatedButton(
