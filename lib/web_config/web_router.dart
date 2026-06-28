@@ -93,7 +93,7 @@ class WebRouter {
         GoRoute(
           path: '/onboarding',
           name: 'onboarding',
-          builder: (context, state) => const OnboardingScreen(),
+          pageBuilder: (context, state) => _FadeRootPage(child: const OnboardingScreen()),
         ),
         
         // Catalogue avec support des filtres
@@ -129,9 +129,11 @@ class WebRouter {
         GoRoute(
           path: '/product/:id',
           name: 'product_detail',
-          builder: (context, state) {
+          pageBuilder: (context, state) {
             final productId = state.pathParameters['id']!;
-            return ModernProductDetailScreen(productId: productId);
+            return _FadeRootPage(
+              child: ModernProductDetailScreen(productId: productId),
+            );
           },
         ),
         
@@ -139,23 +141,23 @@ class WebRouter {
         GoRoute(
           path: '/cart',
           name: 'cart',
-          builder: (context, state) => const ModernCartScreen(),
+          pageBuilder: (context, state) => _FadeRootPage(child: const ModernCartScreen()),
         ),
         
         // Comparateur de produits
         GoRoute(
           path: '/comparison',
           name: 'comparison',
-          builder: (context, state) => const ComparisonScreen(),
+          pageBuilder: (context, state) => _FadeRootPage(child: const ComparisonScreen()),
         ),
         
         // Wishlist partagée (lien public, sans authentification requise)
         GoRoute(
           path: '/wishlist/:shareId',
           name: 'shared_wishlist',
-          builder: (context, state) {
+          pageBuilder: (context, state) {
             final shareId = state.pathParameters['shareId']!;
-            return SharedWishlistScreen(shareId: shareId);
+            return _FadeRootPage(child: SharedWishlistScreen(shareId: shareId));
           },
         ),
         
@@ -170,7 +172,7 @@ class WebRouter {
         GoRoute(
           path: '/auth',
           name: 'auth',
-          builder: (context, state) => const AuthScreen(),
+          pageBuilder: (context, state) => _FadeRootPage(child: const AuthScreen()),
         ),
         
         // Compte utilisateur
@@ -191,35 +193,35 @@ class WebRouter {
         GoRoute(
           path: '/notifications',
           name: 'notifications',
-          builder: (context, state) => const NotificationsScreen(),
+          pageBuilder: (context, state) => _FadeRootPage(child: const NotificationsScreen()),
         ),
         
         // Adresses
         GoRoute(
           path: '/addresses',
           name: 'addresses',
-          builder: (context, state) => const AddressesScreen(),
+          pageBuilder: (context, state) => _FadeRootPage(child: const AddressesScreen()),
         ),
         
         // Sécurité
         GoRoute(
           path: '/security',
           name: 'security',
-          builder: (context, state) => const SecurityScreen(),
+          pageBuilder: (context, state) => _FadeRootPage(child: const SecurityScreen()),
         ),
         
         // Aide
         GoRoute(
           path: '/help',
           name: 'help',
-          builder: (context, state) => const HelpScreen(),
+          pageBuilder: (context, state) => _FadeRootPage(child: const HelpScreen()),
         ),
         
         // Confidentialité
         GoRoute(
           path: '/privacy',
           name: 'privacy',
-          builder: (context, state) => const PrivacyScreen(),
+          pageBuilder: (context, state) => _FadeRootPage(child: const PrivacyScreen()),
         ),
         
         // === ROUTES ADMIN ===
@@ -245,9 +247,9 @@ class WebRouter {
         GoRoute(
           path: '/product-form',
           name: 'product_form',
-          builder: (context, state) {
+          pageBuilder: (context, state) {
             final product = state.extra as Product?;
-            return ProductFormScreen(product: product);
+            return _FadeRootPage(child: ProductFormScreen(product: product));
           },
         ),
         
@@ -255,21 +257,21 @@ class WebRouter {
         GoRoute(
           path: '/demo-data',
           name: 'demo_data',
-          builder: (context, state) => const DemoDataScreen(),
+          pageBuilder: (context, state) => _FadeRootPage(child: const DemoDataScreen()),
         ),
         
         // Login
         GoRoute(
           path: '/login',
           name: 'login',
-          builder: (context, state) => const LoginScreen(),
+          pageBuilder: (context, state) => _FadeRootPage(child: const LoginScreen()),
         ),
         
         // Register
         GoRoute(
           path: '/register',
           name: 'register',
-          builder: (context, state) => const RegisterScreen(),
+          pageBuilder: (context, state) => _FadeRootPage(child: const RegisterScreen()),
         ),
       ],
       
