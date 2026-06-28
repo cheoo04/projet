@@ -270,9 +270,9 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
         children: [
           CustomScrollView(
             slivers: [
-              // App Bar avec image
+              // App Bar avec image et bouton retour
               _buildAppBar(context, isDark, images),
-              
+
               // Contenu
               SliverToBoxAdapter(
                 child: Column(

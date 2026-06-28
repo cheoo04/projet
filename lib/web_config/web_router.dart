@@ -208,7 +208,10 @@ class WebRouter {
           name: 'product_detail',
           pageBuilder: (context, state) {
             final productId = state.pathParameters['id']!;
-            return _SlidePage(
+            // MaterialPage permet le swipe-back iOS natif
+            // sans conflit avec les transitions personnalisées
+            return MaterialPage(
+              key: state.pageKey,
               child: ModernProductDetailScreen(productId: productId),
             );
           },
