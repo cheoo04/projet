@@ -129,19 +129,7 @@ class WebRouter {
                       ),
                     );
                   },
-                  routes: [
-                    // Détail produit imbriqué dans la branche catalogue
-                    GoRoute(
-                      path: '/product/:id',
-                      name: 'product_detail',
-                      pageBuilder: (context, state) {
-                        final productId = state.pathParameters['id']!;
-                        return _SlidePage(
-                          child: ModernProductDetailScreen(productId: productId),
-                        );
-                      },
-                    ),
-                  ],
+                  routes: const [],
                 ),
               ],
             ),
@@ -213,6 +201,18 @@ class WebRouter {
         // ═══════════════════════════════════════════════════════════════
         // ROUTES HORS SHELL — pas de BottomNav
         // ═══════════════════════════════════════════════════════════════
+
+        // Détail produit — hors shell pour garder /product/:id propre
+        GoRoute(
+          path: '/product/:id',
+          name: 'product_detail',
+          pageBuilder: (context, state) {
+            final productId = state.pathParameters['id']!;
+            return _SlidePage(
+              child: ModernProductDetailScreen(productId: productId),
+            );
+          },
+        ),
 
         GoRoute(
           path: '/onboarding',

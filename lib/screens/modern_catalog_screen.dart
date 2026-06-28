@@ -168,10 +168,8 @@ class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
           SafeArea(
             child: Column(
               children: [
-                // Header : Desktop header ou header mobile
-                if (isDesktop)
-                  const DesktopHeader()
-                else
+                // Header mobile uniquement — DesktopHeader géré par AppShell
+                if (!isDesktop)
                   _buildHeader(context, isDark),
                 
                 // Filtres catégories
