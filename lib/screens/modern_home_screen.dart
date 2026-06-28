@@ -101,60 +101,43 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final maxWidth = ResponsiveBreakpoints.maxContentWidth(context);
     
-    // Sur desktop, utiliser une structure avec DesktopHeader
+    // Sur desktop, le DesktopHeader est géré par AppShell — juste le contenu
     if (isDesktop) {
       return Scaffold(
         backgroundColor: isDark ? AppTheme.backgroundDark : AppTheme.backgroundLight,
-        body: Column(
-          children: [
-            // Header desktop fixe
-            const DesktopHeader(),
-            
-            // Contenu scrollable
-            Expanded(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxWidth),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Hero Section
-                        _buildHeroSection(context, isDark),
-                        const SizedBox(height: 32),
-                        
-                        // Catégories
-                        Text('Catégories', style: theme.textTheme.headlineMedium),
-                        const SizedBox(height: 16),
-                        _buildCategoriesGrid(context),
-                        const SizedBox(height: 32),
-                        
-                        // Meilleures Ventes
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Meilleures Ventes', style: theme.textTheme.headlineMedium),
-                            TextButton(
-                              onPressed: () => AppNavigator.push(context, AppNavigator.catalogRoute),
-                              child: const Text('Voir tout'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildFeaturedProducts(context),
-                        const SizedBox(height: 32),
-                        
-                        // WhatsApp
-                        _buildWhatsAppCard(context, isDark),
-                        const SizedBox(height: 32),
-                      ],
-                    ),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeroSection(context, isDark),
+                  const SizedBox(height: 32),
+                  Text('Catégories', style: theme.textTheme.headlineMedium),
+                  const SizedBox(height: 16),
+                  _buildCategoriesGrid(context),
+                  const SizedBox(height: 32),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Meilleures Ventes', style: theme.textTheme.headlineMedium),
+                      TextButton(
+                        onPressed: () => AppNavigator.push(context, AppNavigator.catalogRoute),
+                        child: const Text('Voir tout'),
+                      ),
+                    ],
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  _buildFeaturedProducts(context),
+                  const SizedBox(height: 32),
+                  _buildWhatsAppCard(context, isDark),
+                  const SizedBox(height: 32),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       );
     }
@@ -302,8 +285,6 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
         ),
       ),
       
-      // Bottom Navigation Bar (sur mobile/tablette uniquement)
-      bottomNavigationBar: _buildBottomNavBar(context),
     );
   }
   
@@ -865,47 +846,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
     );
   }
   
-  /// Bottom Navigation Bar
-  Widget _buildBottomNavBar(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: 0,
-      type: BottomNavigationBarType.fixed,
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Accueil',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.search),
-          label: 'Recherche',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.shopping_bag),
-          label: 'Panier',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: 'Compte',
-        ),
-      ],
-      onTap: (index) {
-        switch (index) {
-          case 0:
-            // Déjà sur l'accueil
-            break;
-          case 1:
-            AppNavigator.push(context, AppNavigator.catalogRoute);
-            break;
-          case 2:
-            AppNavigator.push(context, AppNavigator.cartRoute);
-            break;
-          case 3:
-            AppNavigator.push(context, AppNavigator.accountRoute);
-            break;
-        }
-      },
-    );
-  }
+  // BottomNav supprimée — gérée par AppShell (StatefulShellRoute)
 
   /// Ouvrir WhatsApp pour contacter le support
   void _openWhatsAppContact(BuildContext context) async {
