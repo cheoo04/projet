@@ -251,7 +251,7 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
               const Text('Produit introuvable'),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: () => context.pop(),
+                onPressed: () => AppNavigator.pop(context),
                 child: const Text('Retour'),
               ),
             ],
@@ -352,7 +352,7 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
           ),
           child: const Icon(Icons.arrow_back, color: Colors.white),
         ),
-        onPressed: () => context.pop(),
+        onPressed: () => AppNavigator.pop(context),
       ),
       actions: [
         // Bouton Favoris

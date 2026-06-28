@@ -75,7 +75,7 @@ class OptimizedProductCard extends StatelessWidget {
             // Contenu texte
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -153,7 +153,7 @@ class OptimizedProductCard extends StatelessWidget {
 
   Widget _buildImageSection(double cardWidth) {
     // Réduire la hauteur de l'image pour éviter l'overflow
-    final imageHeight = cardWidth * 0.7;
+    final imageHeight = cardWidth * 0.65;
     final badges = product.allBadges;
     
     // Debug: afficher l'URL de l'image

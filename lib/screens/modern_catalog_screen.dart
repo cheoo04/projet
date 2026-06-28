@@ -226,12 +226,11 @@ class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
           // Titre et icônes
           Row(
             children: [
-              // Bouton retour — affiché seulement si on peut revenir en arrière
-              if (context.canPop())
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => context.pop(),
-                ),
+              // Bouton retour — toujours affiché (push() conserve la pile)
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => AppNavigator.pop(context),
+              ),
               
               // Titre
               Expanded(
