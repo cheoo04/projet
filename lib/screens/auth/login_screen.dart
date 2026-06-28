@@ -198,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Continuer en tant que visiteur
                     TextButton(
                       onPressed: () {
-                        AppNavigator.go(context, '/visitor');
+                        AppNavigator.go(context, '/');
                       },
                       child: Text(
                         'Continuer en tant que visiteur',
