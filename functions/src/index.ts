@@ -1069,7 +1069,15 @@ export const generateSitemap = functions
     const BASE = "https://pharrellphone.com";
     const now = new Date().toISOString().split("T")[0];
 
-    const staticUrls = [
+    interface SitemapUrl {
+      loc: string;
+      priority: string;
+      changefreq: string;
+      title?: string;
+      image?: string;
+    }
+
+    const staticUrls: SitemapUrl[] = [
       { loc: "/",        priority: "1.0", changefreq: "daily" },
       { loc: "/catalog", priority: "0.9", changefreq: "daily" },
       { loc: "/catalog?category=Smartphones",  priority: "0.8", changefreq: "daily" },
