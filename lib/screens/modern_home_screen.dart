@@ -20,7 +20,11 @@ class ModernHomeScreen extends StatefulWidget {
   State<ModernHomeScreen> createState() => _ModernHomeScreenState();
 }
 
-class _ModernHomeScreenState extends State<ModernHomeScreen> {
+class _ModernHomeScreenState extends State<ModernHomeScreen>
+    with AutomaticKeepAliveClientMixin {
+  
+  @override
+  bool get wantKeepAlive => true;
   // Contrôleur pour le carrousel d'images
   late PageController _heroPageController;
   Timer? _heroTimer;
@@ -96,6 +100,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen> {
   
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);

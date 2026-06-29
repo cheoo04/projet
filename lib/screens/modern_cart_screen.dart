@@ -25,7 +25,11 @@ class ModernCartScreen extends StatefulWidget {
   State<ModernCartScreen> createState() => _ModernCartScreenState();
 }
 
-class _ModernCartScreenState extends State<ModernCartScreen> {
+class _ModernCartScreenState extends State<ModernCartScreen>
+    with AutomaticKeepAliveClientMixin {
+  
+  @override
+  bool get wantKeepAlive => true;
   double get _deliveryFee => 5000.0;
 
   /// Numéro Wave pour le paiement — identique au numéro WhatsApp de commande.
@@ -60,9 +64,9 @@ class _ModernCartScreenState extends State<ModernCartScreen> {
   
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
     return Consumer<CartProvider>(
       builder: (context, cart, child) {
         final cartItems = cart.items.entries.map((entry) {

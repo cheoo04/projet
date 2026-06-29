@@ -32,7 +32,11 @@ class ModernCatalogScreen extends StatefulWidget {
   State<ModernCatalogScreen> createState() => _ModernCatalogScreenState();
 }
 
-class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
+class _ModernCatalogScreenState extends State<ModernCatalogScreen>
+    with AutomaticKeepAliveClientMixin {
+  
+  @override
+  bool get wantKeepAlive => true;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _searchFocusNode = FocusNode();
@@ -119,10 +123,18 @@ class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
   Future<void> _loadProducts() async {
     if (_isLoading) return;
     
+    final provider = Provider.of<ProductProvider>(context, listen: false);
+    
+    // Si les produits sont déjà en mémoire, ne pas afficher le spinner
+    // — juste s'assurer que le stream est actif
+    if (provider.products.isNotEmpty) {
+      await provider.loadProducts();
+      return;
+    }
+    
     setState(() => _isLoading = true);
     
     try {
-      final provider = Provider.of<ProductProvider>(context, listen: false);
       await provider.loadProducts();
     } catch (e) {
       if (mounted) {
@@ -156,6 +168,7 @@ class _ModernCatalogScreenState extends State<ModernCatalogScreen> {
   
   @override
   Widget build(BuildContext context) {
+    super.build(context); // requis par AutomaticKeepAliveClientMixin
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
