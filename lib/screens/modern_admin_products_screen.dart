@@ -495,7 +495,7 @@ class _ModernAdminProductsScreenState extends State<ModernAdminProductsScreen> {
   }
 
   void _viewProductDetails(Product product) {
-    context.push('/product/${product.id}');
+    context.go('/product/${product.id}');
   }
 
   void _addNewProduct() {

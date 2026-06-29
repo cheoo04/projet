@@ -164,17 +164,12 @@ class WebRouter {
         // ROUTES HORS SHELL — pas de BottomNav
         // ═══════════════════════════════════════════════════════════════
 
-        // Détail produit — hors shell pour garder /product/:id propre
         GoRoute(
           path: '/product/:id',
           name: 'product_detail',
           pageBuilder: (context, state) {
             final productId = state.pathParameters['id']!;
-            // _SlidePage (comme toutes les autres pages secondaires) désactive
-            // le swipe-back natif géré par Safari/iOS, qui entrait en conflit
-            // avec la transition Flutter et provoquait un double retour visible.
-            return _SlidePage(
-              key: state.pageKey,
+            return _FadeRootPage(
               child: ModernProductDetailScreen(productId: productId),
             );
           },
@@ -273,17 +268,20 @@ class WebRouter {
         GoRoute(
           path: '/admin-login',
           name: 'admin_login',
-          builder: (context, state) => const DeferredAdminLogin(),
+          pageBuilder: (context, state) =>
+              _FadeRootPage(child: const DeferredAdminLogin()),
         ),
         GoRoute(
           path: '/admin-dashboard',
           name: 'admin_dashboard',
-          builder: (context, state) => const DeferredAdminDashboard(),
+          pageBuilder: (context, state) =>
+              _FadeRootPage(child: const DeferredAdminDashboard()),
         ),
         GoRoute(
           path: '/admin',
           name: 'admin',
-          builder: (context, state) => const DeferredAdminNavigation(),
+          pageBuilder: (context, state) =>
+              _FadeRootPage(child: const DeferredAdminNavigation()),
         ),
 
         GoRoute(

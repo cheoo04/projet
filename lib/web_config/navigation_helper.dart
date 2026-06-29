@@ -107,7 +107,7 @@ class AppNavigator {
   }
 
   static void toProductDetail(BuildContext context, String productId) {
-    push(context, '/product/$productId');
+    go(context, '/product/$productId');
   }
 
   static Future<T?> toProductForm<T>(BuildContext context,
