@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../config/app_theme.dart';
 import '../models/product.dart';
 import '../providers/app_providers.dart';
 import '../widgets/optimized_image.dart';
+import '../web_config/navigation_helper.dart';
 
 /// Section "Produits similaires" pour la page détail produit
 class SimilarProductsSection extends StatelessWidget {
@@ -50,12 +52,7 @@ class SimilarProductsSection extends StatelessWidget {
                   ),
                   TextButton(
                     onPressed: () {
-                      // Naviguer vers le catalogue avec filtre catégorie
-                      Navigator.pushNamed(
-                        context,
-                        '/catalog',
-                        arguments: {'category': category},
-                      );
+                      context.go('/catalog', extra: {'category': category});
                     },
                     child: const Text('Voir tout'),
                   ),
@@ -78,11 +75,7 @@ class SimilarProductsSection extends StatelessWidget {
                       if (onProductTap != null) {
                         onProductTap!(similarProducts[index].id);
                       } else {
-                        Navigator.pushReplacementNamed(
-                          context,
-                          '/product-detail',
-                          arguments: similarProducts[index].id,
-                        );
+                        AppNavigator.toProductDetail(context, similarProducts[index].id);
                       }
                     },
                   );
@@ -379,11 +372,7 @@ class SimilarProductsGrid extends StatelessWidget {
                 if (onProductTap != null) {
                   onProductTap!(products[index].id);
                 } else {
-                  Navigator.pushReplacementNamed(
-                    context,
-                    '/product-detail',
-                    arguments: products[index].id,
-                  );
+                  AppNavigator.toProductDetail(context, products[index].id);
                 }
               },
             );
