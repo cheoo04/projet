@@ -144,6 +144,11 @@
     ],
     "rewrites": [
       {
+        "source": "/sitemap-dynamic.xml",
+        "function": "generateSitemap",
+        "region": "europe-west1"
+      },
+      {
         "source": "/sitemap.xml",
         "destination": "/sitemap.xml"
       },

@@ -2,18 +2,21 @@
 User-agent: *
 Allow: /
 
-# Sitemap
+# Sitemaps
 Sitemap: https://pharrellphone.com/sitemap.xml
+Sitemap: https://europe-west1-first-pro-cheoo.cloudfunctions.net/generateSitemap
 
-# Bloquer les pages admin
+# Bloquer admin et assets internes
 Disallow: /admin
-Disallow: /admin/*
-
-# Bloquer les assets internes
+Disallow: /admin-login
+Disallow: /admin-dashboard
 Disallow: /flutter.js
 Disallow: /flutter_service_worker.js
+Disallow: /flutter_bootstrap.js
 Disallow: /main.dart.js
+Disallow: /demo-data
 
-# Autoriser les ressources importantes
+# Autoriser ressources importantes
 Allow: /assets/
 Allow: /icons/
+Allow: /og-image.png

@@ -55,6 +55,94 @@
   <!-- Preload ressources critiques -->
   <link rel="preload" href="flutter_bootstrap.js" as="script">
 
+  <!-- Structured Data : Organisation + Boutique (schema.org) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "name": "Pharrell Phone",
+        "url": "https://pharrellphone.com",
+        "logo": "https://pharrellphone.com/icons/Icon-512.png",
+        "description": "Boutique de smartphones et accessoires à Abidjan, Côte d'Ivoire",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Abidjan",
+          "addressCountry": "CI"
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "customer service",
+          "availableLanguage": "French"
+        }
+      },
+      {
+        "@type": "WebSite",
+        "url": "https://pharrellphone.com",
+        "name": "Pharrell Phone",
+        "description": "Boutique en ligne de smartphones et accessoires en Côte d'Ivoire",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": {
+            "@type": "EntryPoint",
+            "urlTemplate": "https://pharrellphone.com/catalog?search={search_term_string}"
+          },
+          "query-input": "required name=search_term_string"
+        }
+      }
+    ]
+  }
+  </script>
+
+  <!-- Meta tags dynamiques par route — pour Google et partage social -->
+  <script>
+    (function() {
+      var META = {
+        '/':        { title: 'Pharrell Phone — Boutique Smartphones à Abidjan', desc: "Achetez vos smartphones, accessoires et appareils connectés en Côte d'Ivoire. Livraison rapide à Abidjan et partout au pays." },
+        '/catalog': { title: 'Catalogue — Pharrell Phone', desc: 'Découvrez notre sélection de smartphones Apple, Samsung, Xiaomi et accessoires. Prix en FCFA, livraison en Côte d\'Ivoire.' },
+        '/cart':    { title: 'Mon panier — Pharrell Phone', desc: 'Votre panier d\'achat Pharrell Phone.' },
+        '/chat':    { title: 'Assistant virtuel — Pharrell Phone', desc: 'Posez vos questions sur nos produits à notre assistant intelligent.' },
+        '/account': { title: 'Mon compte — Pharrell Phone', desc: 'Gérez votre compte Pharrell Phone.' },
+        '/my-orders': { title: 'Mes commandes — Pharrell Phone', desc: 'Suivez vos commandes passées sur Pharrell Phone.' },
+      };
+
+      function setMeta(title, desc, url) {
+        document.title = title;
+        var sel = function(s) { return document.querySelector(s); };
+        var set = function(el, attr, val) { if (el) el.setAttribute(attr, val); };
+        set(sel('meta[name="description"]'), 'content', desc);
+        set(sel('meta[property="og:title"]'), 'content', title);
+        set(sel('meta[property="og:description"]'), 'content', desc);
+        set(sel('meta[property="og:url"]'), 'content', url);
+        set(sel('meta[name="twitter:title"]'), 'content', title);
+        set(sel('meta[name="twitter:description"]'), 'content', desc);
+      }
+
+      function updateForPath(path) {
+        var base = 'https://pharrellphone.com';
+        if (path.startsWith('/product/')) {
+          setMeta('Produit — Pharrell Phone', 'Détails, prix et disponibilité de ce produit sur Pharrell Phone, Abidjan.', base + path);
+        } else {
+          var m = META[path] || META['/'];
+          setMeta(m.title, m.desc, base + path);
+        }
+      }
+
+      updateForPath(window.location.pathname);
+
+      // Suivre les changements de route Flutter (pushState)
+      var _origPush = history.pushState.bind(history);
+      history.pushState = function(state, title, url) {
+        _origPush(state, title, url);
+        if (url) updateForPath(new URL(url, window.location.href).pathname);
+      };
+      window.addEventListener('popstate', function() {
+        updateForPath(window.location.pathname);
+      });
+    })();
+  </script>
+
   <!-- Firebase SDK - DEFER pour éviter render-blocking -->
   <script async src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script async src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
@@ -146,6 +234,45 @@
 </head>
 <body>
   <!-- Splash screen Pharrell Phone -->
+  <!-- 
+    CONTENU SEO : visible par Google, masqué quand Flutter est prêt.
+    Permet l'indexation malgré le rendu CanvasKit (canvas invisible aux crawlers).
+  -->
+  <div id="seo-content" aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;">
+    <h1>Pharrell Phone — Boutique Smartphones &amp; Accessoires à Abidjan</h1>
+    <p>Pharrell Phone est votre boutique de référence pour les smartphones, accessoires téléphoniques et appareils connectés à Abidjan, Côte d'Ivoire. Livraison rapide dans tout le pays.</p>
+    <nav>
+      <a href="/catalog">Catalogue produits</a>
+      <a href="/catalog?category=Smartphones">Smartphones</a>
+      <a href="/catalog?category=Accessoires">Accessoires</a>
+      <a href="/chat">Assistant virtuel</a>
+    </nav>
+    <section>
+      <h2>Pourquoi choisir Pharrell Phone ?</h2>
+      <ul>
+        <li>Large sélection de smartphones : Apple iPhone, Samsung Galaxy, Xiaomi, Huawei et plus</li>
+        <li>Accessoires de qualité : coques, écouteurs, chargeurs, câbles</li>
+        <li>Prix compétitifs en FCFA avec promotions régulières</li>
+        <li>Livraison à domicile à Abidjan et dans toute la Côte d'Ivoire</li>
+        <li>Service client disponible via WhatsApp</li>
+        <li>Paiement sécurisé</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Nos catégories</h2>
+      <ul>
+        <li><a href="/catalog?category=Smartphones">Smartphones et téléphones</a></li>
+        <li><a href="/catalog?category=Accessoires">Accessoires téléphoniques</a></li>
+        <li><a href="/catalog?category=Tablettes">Tablettes</a></li>
+        <li><a href="/catalog?category=Audio">Écouteurs et audio</a></li>
+      </ul>
+    </section>
+    <address>
+      Pharrell Phone — Abidjan, Côte d'Ivoire<br>
+      <a href="https://pharrellphone.com">pharrellphone.com</a>
+    </address>
+  </div>
+
   <div id="pharrell-splash">
     <div class="splash-logo">
       <span class="splash-logo-text">P</span>

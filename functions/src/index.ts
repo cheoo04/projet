@@ -1057,3 +1057,83 @@ Règles :
     const analysis = await callGemini(apiKey, systemInstruction, contents);
     return { analysis };
   });
+/**
+ * Sitemap dynamique — généré depuis Firestore en temps réel.
+ * Inclut toutes les pages statiques + chaque fiche produit.
+ * Accessible sur https://pharrellphone.com/sitemap-dynamic.xml
+ * (le sitemap.xml statique pointe vers celui-ci dans robots.txt)
+ */
+export const generateSitemap = functions
+  .region("europe-west1")
+  .https.onRequest(async (req, res) => {
+    const BASE = "https://pharrellphone.com";
+    const now = new Date().toISOString().split("T")[0];
+
+    const staticUrls = [
+      { loc: "/",        priority: "1.0", changefreq: "daily" },
+      { loc: "/catalog", priority: "0.9", changefreq: "daily" },
+      { loc: "/catalog?category=Smartphones",  priority: "0.8", changefreq: "daily" },
+      { loc: "/catalog?category=Accessoires",  priority: "0.8", changefreq: "daily" },
+      { loc: "/catalog?category=Tablettes",    priority: "0.7", changefreq: "weekly" },
+      { loc: "/catalog?category=Audio",        priority: "0.7", changefreq: "weekly" },
+      { loc: "/chat",    priority: "0.6", changefreq: "monthly" },
+    ];
+
+    // Charger tous les produits en stock
+    const productsSnap = await db.collection("products")
+      .where("isInStock", "==", true)
+      .get();
+
+    const productUrls = productsSnap.docs.map((doc) => {
+      const d = doc.data();
+      return {
+        loc: `/product/${doc.id}`,
+        priority: "0.8",
+        changefreq: "weekly",
+        title: d.name,
+        description: d.shortDescription || d.description || "",
+        image: d.imageUrls?.[0] || "",
+        price: d.price ? `${d.price} FCFA` : "",
+        brand: d.brand || "",
+      };
+    });
+
+    const allUrls = [...staticUrls, ...productUrls];
+
+    const urlElements = allUrls.map((u) => {
+      const imageTag = u.image
+        ? `
+    <image:image>
+      <image:loc>${u.image}</image:loc>
+      ${u.title ? `<image:title>${escapeXml(u.title)}</image:title>` : ""}
+    </image:image>`
+        : "";
+
+      return `
+  <url>
+    <loc>${BASE}${u.loc}</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>${imageTag}
+  </url>`;
+    });
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${urlElements.join("")}
+</urlset>`;
+
+    res.set("Content-Type", "application/xml");
+    res.set("Cache-Control", "public, max-age=3600"); // cache 1h
+    res.send(xml);
+  });
+
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
