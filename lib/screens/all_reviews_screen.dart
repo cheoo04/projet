@@ -1,3 +1,4 @@
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../models/review.dart';
@@ -121,7 +122,7 @@ class _AllReviewsScreenState extends State<AllReviewsScreen> {
       );
 
       if (shouldLogin == true && mounted) {
-        Navigator.pushNamed(context, '/auth');
+        context.go('/auth');
       }
       return;
     }

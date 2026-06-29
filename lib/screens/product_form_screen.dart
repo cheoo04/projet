@@ -1,3 +1,4 @@
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
@@ -215,11 +216,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               Navigator.pop(context); // Fermer le dialogue
               Navigator.pop(this.context, true); // Retourner à la liste
               // Naviguer vers la boutique avec le produit
-              Navigator.pushNamed(
-                this.context, 
-                '/product-detail',
-                arguments: productId,
-              );
+              this.context.go('/product/$productId');
             },
             icon: const Icon(Icons.storefront),
             label: const Text('Voir sur la boutique'),

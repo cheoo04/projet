@@ -1201,7 +1201,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
             onPressed: () async {
               try {
                 await FirebaseAuth.instance.currentUser?.delete();
-                Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+                context.go('/');
               } catch (e) {
                 context.pop();
                 ScaffoldMessenger.of(context).showSnackBar(

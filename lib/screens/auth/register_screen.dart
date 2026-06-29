@@ -1,3 +1,4 @@
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import '/services/auth_service.dart';
 
@@ -340,7 +341,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
 
         // Redirection vers l'interface client
-        Navigator.pushReplacementNamed(context, '/client');
+        context.go('/');
       }
     } catch (e) {
       if (mounted) {

@@ -1,3 +1,4 @@
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../config/app_theme.dart';
@@ -47,7 +48,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           const Text('Connectez-vous pour voir vos commandes'),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () => Navigator.pushNamed(context, '/auth'),
+            onPressed: () => context.go('/auth'),
             child: const Text('Se connecter'),
           ),
         ],
@@ -127,7 +128,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () => Navigator.pushNamed(context, '/catalog'),
+            onPressed: () => context.go('/catalog'),
             icon: const Icon(Icons.shopping_cart),
             label: const Text('Parcourir le catalogue'),
             style: ElevatedButton.styleFrom(

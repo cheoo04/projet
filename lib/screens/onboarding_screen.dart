@@ -1,3 +1,4 @@
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_theme.dart';
@@ -47,7 +48,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     
     if (mounted) {
       // Naviguer vers l'écran d'accueil
-      Navigator.pushReplacementNamed(context, '/home');
+      context.go('/');
     }
   }
 
