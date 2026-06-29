@@ -6,8 +6,8 @@
 // Ce nom de cache DOIT changer à chaque déploiement pour forcer la mise à
 // jour chez tous les utilisateurs. Flutter le gère via son propre SW, mais
 // on synchronise ici pour éviter les conflits.
-const CACHE_VERSION = 'pharrell-v3';
-const IMAGE_CACHE   = 'pharrell-images-v3';
+const CACHE_VERSION = 'pharrell-v4';
+const IMAGE_CACHE   = 'pharrell-images-v4';
 
 // Ressources pré-cachées au démarrage
 const PRECACHE_URLS = [
@@ -21,6 +21,10 @@ const PRECACHE_URLS = [
 ];
 
 // Jamais mettre en cache : Firebase APIs, Cloud Functions, CDNs dynamiques
+// Fichiers .part.js (deferred loading Flutter) - jamais mis en cache
+// car ils changent à chaque build et le SW les corromprait entre déploiements
+const PART_JS_REGEX = /\.part\.js(\?|$)/;
+
 const NEVER_CACHE = [
   /firebasestorage\.googleapis\.com/,
   /firestore\.googleapis\.com/,
@@ -66,6 +70,10 @@ self.addEventListener('fetch', (event) => {
 
   // Ignorer non-GET
   if (request.method !== 'GET') return;
+
+  // Toujours aller au réseau pour les fichiers .part.js (deferred loading Flutter)
+  // Ces fichiers changent à chaque build - le cache les corromprait
+  if (PART_JS_REGEX.test(url.pathname + url.search)) return;
 
   // Ignorer toutes les APIs Firebase et Cloud Functions
   if (NEVER_CACHE.some((p) => p.test(url.href))) return;

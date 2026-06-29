@@ -137,8 +137,15 @@
         _origPush(state, title, url);
         if (url) updateForPath(new URL(url, window.location.href).pathname);
       };
-      window.addEventListener('popstate', function() {
+
+      // Bloquer le swipe-back Safari iOS : empêcher le navigateur de gérer
+      // popstate lui-même (Safari anime la page précédente en arrière-plan).
+      // Flutter gère sa propre navigation — on laisse juste les meta se mettre à jour.
+      window.addEventListener('popstate', function(e) {
         updateForPath(window.location.pathname);
+        // Repousser l'état courant pour annuler le retour Safari
+        // et laisser Flutter décider quoi faire
+        history.pushState(e.state, '', window.location.href);
       });
     })();
   </script>
