@@ -154,44 +154,6 @@ class WebRouter {
                   name: 'account',
                   pageBuilder: (context, state) =>
                       const _FadeRootPage(child: AccountScreen()),
-                  routes: [
-                    GoRoute(
-                      path: '/my-orders',
-                      name: 'my_orders',
-                      pageBuilder: (context, state) =>
-                          _SlidePage(child: const MyOrdersScreen()),
-                    ),
-                    GoRoute(
-                      path: '/notifications',
-                      name: 'notifications',
-                      pageBuilder: (context, state) =>
-                          _SlidePage(child: const NotificationsScreen()),
-                    ),
-                    GoRoute(
-                      path: '/addresses',
-                      name: 'addresses',
-                      pageBuilder: (context, state) =>
-                          _SlidePage(child: const AddressesScreen()),
-                    ),
-                    GoRoute(
-                      path: '/security',
-                      name: 'security',
-                      pageBuilder: (context, state) =>
-                          _SlidePage(child: const SecurityScreen()),
-                    ),
-                    GoRoute(
-                      path: '/help',
-                      name: 'help',
-                      pageBuilder: (context, state) =>
-                          _SlidePage(child: const HelpScreen()),
-                    ),
-                    GoRoute(
-                      path: '/privacy',
-                      name: 'privacy',
-                      pageBuilder: (context, state) =>
-                          _SlidePage(child: const PrivacyScreen()),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -246,6 +208,44 @@ class WebRouter {
           name: 'chat',
           pageBuilder: (context, state) =>
               _SlidePage(child: const ChatScreen()),
+        ),
+
+        // Pages compte — routes top-level accessibles via AppNavigator.push
+        GoRoute(
+          path: '/my-orders',
+          name: 'my_orders',
+          pageBuilder: (context, state) =>
+              const _FadeRootPage(child: MyOrdersScreen()),
+        ),
+        GoRoute(
+          path: '/notifications',
+          name: 'notifications',
+          pageBuilder: (context, state) =>
+              const _FadeRootPage(child: NotificationsScreen()),
+        ),
+        GoRoute(
+          path: '/addresses',
+          name: 'addresses',
+          pageBuilder: (context, state) =>
+              const _FadeRootPage(child: AddressesScreen()),
+        ),
+        GoRoute(
+          path: '/security',
+          name: 'security',
+          pageBuilder: (context, state) =>
+              const _FadeRootPage(child: SecurityScreen()),
+        ),
+        GoRoute(
+          path: '/help',
+          name: 'help',
+          pageBuilder: (context, state) =>
+              const _FadeRootPage(child: HelpScreen()),
+        ),
+        GoRoute(
+          path: '/privacy',
+          name: 'privacy',
+          pageBuilder: (context, state) =>
+              const _FadeRootPage(child: PrivacyScreen()),
         ),
 
         GoRoute(
