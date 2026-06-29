@@ -6,6 +6,7 @@ import '../widgets/ui_components.dart';
 import '../providers/app_providers.dart';
 import '../services/notification_service.dart';
 import '../services/auth_service.dart';
+import 'auth/two_factor_verification_screen.dart';
 import 'modern_admin_products_screen.dart';
 import 'modern_stock_management_screen.dart';
 import 'modern_order_management_screen.dart';
@@ -292,13 +293,20 @@ class _ModernAdminLoginScreenState extends State<ModernAdminLoginScreen> {
       );
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Bienvenue ${user.firstName} !'),
-            backgroundColor: Colors.green,
+        // Afficher la 2FA avant d'accéder à l'admin
+        // La 2FA envoie un code par email et attend la vérification
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TwoFactorVerificationScreen(
+              onVerified: () {
+                // 2FA validée → aller à l'admin
+                if (context.mounted) {
+                  context.go('/admin');
+                }
+              },
+            ),
           ),
         );
-        Navigator.pushReplacementNamed(context, '/admin');
       }
     } catch (e) {
       if (mounted) {
