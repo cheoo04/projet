@@ -208,9 +208,10 @@ class WebRouter {
           name: 'product_detail',
           pageBuilder: (context, state) {
             final productId = state.pathParameters['id']!;
-            // MaterialPage permet le swipe-back iOS natif
-            // sans conflit avec les transitions personnalisées
-            return MaterialPage(
+            // _SlidePage (comme toutes les autres pages secondaires) désactive
+            // le swipe-back natif géré par Safari/iOS, qui entrait en conflit
+            // avec la transition Flutter et provoquait un double retour visible.
+            return _SlidePage(
               key: state.pageKey,
               child: ModernProductDetailScreen(productId: productId),
             );

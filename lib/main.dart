@@ -38,6 +38,7 @@ import 'services/crash_handler.dart';
 import 'services/fcm_service.dart';
 import 'services/app_init_service.dart';
 import 'web_config/web_router.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 
 void main() async {
   // URLs propres sans # sur le web
