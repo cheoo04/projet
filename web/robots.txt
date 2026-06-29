@@ -3,8 +3,7 @@ User-agent: *
 Allow: /
 
 # Sitemaps
-Sitemap: https://pharrellphone.com/sitemap.xml
-Sitemap: https://europe-west1-first-pro-cheoo.cloudfunctions.net/generateSitemap
+Sitemap: https://pharrellphone.com/sitemap-dynamic.xml
 
 # Bloquer admin et assets internes
 Disallow: /admin
