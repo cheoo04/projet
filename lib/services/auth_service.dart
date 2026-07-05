@@ -276,7 +276,18 @@ class AuthService {
   }
 
   Future<void> resetPassword(String email) async {
-    await _auth.sendPasswordResetEmail(email: email);
+    await _auth.sendPasswordResetEmail(
+      email: email,
+      actionCodeSettings: ActionCodeSettings(
+        // Redirige vers pharrellphone.com après reset
+        url: 'https://pharrellphone.com',
+        handleCodeInApp: false,
+        androidPackageName: 'com.example.pharrell_phone',
+        androidInstallApp: true,
+        androidMinimumVersion: '23',
+        iOSBundleId: 'com.example.pharrellPhone',
+      ),
+    );
   }
 
   Future<void> updateUserProfile({

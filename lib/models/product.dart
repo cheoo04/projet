@@ -10,6 +10,7 @@ class Product {
   final double price;
   final String description;
   final List<String> imageUrls;
+  final List<String> videoUrls;
   final bool isInStock;
   final int stock;
   final String supplierReference;
@@ -65,6 +66,7 @@ class Product {
     required this.price,
     required this.description,
     required this.imageUrls,
+    this.videoUrls = const [],
     required this.isInStock,
     this.stock = 0,
     this.supplierReference = '',
@@ -155,6 +157,7 @@ class Product {
       price: (map['price'] ?? 0).toDouble(),
       description: map['description'] as String? ?? '',
       imageUrls: List<String>.from(map['imageUrls'] ?? []),
+      videoUrls: List<String>.from(map['videoUrls'] ?? []),
       isInStock: map['isInStock'] as bool? ?? false,
       stock: map['stock'] as int? ?? 0,
       supplierReference: map['supplierReference'] as String? ?? '',
@@ -203,6 +206,7 @@ class Product {
       'price': price,
       'description': description,
       'imageUrls': imageUrls,
+      'videoUrls': videoUrls,
       'isInStock': isInStock,
       'stock': stock,
       'supplierReference': supplierReference,
@@ -236,6 +240,7 @@ class Product {
     double? price,
     String? description,
     List<String>? imageUrls,
+    List<String>? videoUrls,
     bool? isInStock,
     int? stock,
     String? supplierReference,
@@ -266,6 +271,7 @@ class Product {
       price: price ?? this.price,
       description: description ?? this.description,
       imageUrls: imageUrls ?? this.imageUrls,
+      videoUrls: videoUrls ?? this.videoUrls,
       isInStock: isInStock ?? this.isInStock,
       stock: stock ?? this.stock,
       supplierReference: supplierReference ?? this.supplierReference,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -595,7 +596,22 @@ class _ModernCartScreenState extends State<ModernCartScreen>
     final url = Uri.parse('https://wa.me/2250788711896?text=${Uri.encodeComponent(message)}');
     
     try {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+      // Sur web: platformDefault ouvre dans un nouvel onglet
+      // Sur mobile: externalApplication ouvre WhatsApp directement
+      final mode = kIsWeb 
+          ? LaunchMode.platformDefault 
+          : LaunchMode.externalApplication;
+      
+      if (!await canLaunchUrl(url)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Impossible d\'ouvrir WhatsApp')),
+          );
+        }
+        return;
+      }
+      
+      await launchUrl(url, mode: mode);
       
       // Optionnel: Vider le panier après envoi
       if (mounted) {
