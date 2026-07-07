@@ -5,11 +5,13 @@ import '../config/app_theme.dart';
 import '../widgets/ui_components.dart';
 import '../providers/app_providers.dart';
 import '../services/notification_service.dart';
+import '../models/notification.dart';
 import '../services/auth_service.dart';
 import 'auth/two_factor_verification_screen.dart';
 import 'modern_admin_products_screen.dart';
 import 'modern_stock_management_screen.dart';
 import 'modern_order_management_screen.dart';
+import '../services/order_service.dart';
 import 'modern_category_management_screen.dart';
 import 'promotion_management_screen.dart';
 import 'user_management_screen.dart';
@@ -399,6 +401,7 @@ class _ModernAdminDashboardScreenState extends State<ModernAdminDashboardScreen>
   int _totalProducts = 0;
   int _outOfStock = 0;
   int _notifications = 0;
+  int _totalOrders = 0;
   bool _isLoading = true;
   
   @override
@@ -412,23 +415,24 @@ class _ModernAdminDashboardScreenState extends State<ModernAdminDashboardScreen>
     try {
       final productProvider = Provider.of<ProductProvider>(context, listen: false);
       
-      // Charger les produits si nécessaire
       if (productProvider.products.isEmpty) {
         await productProvider.loadProducts();
       }
       
-      // Calculer les stats
       final products = productProvider.products;
       final outOfStock = products.where((p) => p.stock == 0).length;
       
-      // Charger les notifications
       final notificationService = NotificationService();
       final notifications = await notificationService.getNotifications();
+
+      // Charger les stats commandes réelles depuis Firestore
+      final orderStats = await OrderService().getOrderStats();
       
       setState(() {
         _totalProducts = products.length;
         _outOfStock = outOfStock;
         _notifications = notifications.length;
+        _totalOrders = orderStats['totalOrders'] as int? ?? 0;
         _isLoading = false;
       });
     } catch (e) {
@@ -543,7 +547,7 @@ class _ModernAdminDashboardScreenState extends State<ModernAdminDashboardScreen>
       {'label': 'Produits', 'value': '$_totalProducts', 'icon': Icons.inventory, 'color': AppTheme.primaryViolet},
       {'label': 'Ruptures', 'value': '$_outOfStock', 'icon': Icons.warning, 'color': AppTheme.error},
       {'label': 'Notifications', 'value': '$_notifications', 'icon': Icons.notifications, 'color': AppTheme.warning},
-      {'label': 'Commandes', 'value': '0', 'icon': Icons.shopping_bag, 'color': AppTheme.success},
+      {'label': 'Commandes', 'value': '$_totalOrders', 'icon': Icons.shopping_bag, 'color': AppTheme.success},
     ];
     
     return GridView.builder(
@@ -694,73 +698,84 @@ class _ModernAdminDashboardScreenState extends State<ModernAdminDashboardScreen>
   
   /// Liste des notifications
   Widget _buildNotificationsList(BuildContext context) {
-    // Mock data
-    final notifications = [
-      {'title': 'Stock faible', 'message': 'iPhone 15 Pro - 5 exemplaires', 'time': 'Il y a 2h', 'isRead': false},
-      {'title': 'Nouvelle commande', 'message': 'Commande #1234', 'time': 'Il y a 3h', 'isRead': true},
-    ];
-    
-    if (notifications.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Center(
-            child: Text(
-              'Aucune notification',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-    
-    return Column(
-      children: notifications.map((notif) {
-        return Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: (notif['isRead'] as bool)
-                    ? AppTheme.grey200
-                    : AppTheme.primaryViolet.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.notifications,
-                color: (notif['isRead'] as bool) ? AppTheme.grey400 : AppTheme.primaryViolet,
-                size: 20,
-              ),
-            ),
-            title: Text(notif['title'] as String),
-            subtitle: Text(notif['message'] as String),
-            trailing: Text(
-              notif['time'] as String,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            onTap: () {
-              // Marquer comme lu et afficher détails
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: Text(notif['title'] as String),
-                  content: Text(notif['message'] as String),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Fermer'),
-                    ),
-                  ],
+    return FutureBuilder<List<AppNotification>>(
+      future: NotificationService().getNotifications(limit: 20),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final notifications = snapshot.data ?? [];
+
+        if (notifications.isEmpty) {
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Text(
+                  'Aucune notification',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                  ),
                 ),
-              );
-            },
-          ),
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          children: notifications.map((notif) {
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: notif.isRead
+                        ? AppTheme.grey200
+                        : AppTheme.primaryViolet.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.notifications,
+                    color: notif.isRead ? AppTheme.grey400 : AppTheme.primaryViolet,
+                    size: 20,
+                  ),
+                ),
+                title: Text(notif.title),
+                subtitle: Text(notif.message),
+                trailing: Text(
+                  _formatTime(notif.createdAt),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text(notif.title),
+                      content: Text(notif.message),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Fermer'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
+  }
+
+  String _formatTime(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes}min';
+    if (diff.inHours < 24) return 'Il y a ${diff.inHours}h';
+    return 'Il y a ${diff.inDays}j';
   }
 }
