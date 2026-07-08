@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/product.dart';
 import '../screens/onboarding_screen.dart';
 import '../screens/modern_home_screen.dart';
+import '../screens/checkout_screen.dart';
 import '../screens/modern_catalog_screen.dart';
 import '../screens/modern_product_detail_screen.dart';
 import '../screens/modern_cart_screen.dart';
@@ -163,6 +164,13 @@ class WebRouter {
         // ═══════════════════════════════════════════════════════════════
         // ROUTES HORS SHELL — pas de BottomNav
         // ═══════════════════════════════════════════════════════════════
+
+        GoRoute(
+          path: '/checkout',
+          name: 'checkout',
+          pageBuilder: (context, state) =>
+              _FadeRootPage(child: const CheckoutScreen()),
+        ),
 
         GoRoute(
           path: '/product/:id',

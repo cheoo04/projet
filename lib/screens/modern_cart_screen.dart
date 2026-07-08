@@ -408,14 +408,21 @@ class _ModernCartScreenState extends State<ModernCartScreen>
                 
                 const SizedBox(width: 12),
                 
-                // Commander
+                // Commander → formulaire de commande intégré
                 Expanded(
                   flex: 2,
                   child: PrimaryButton(
                     text: 'Commander',
-                    icon: Icons.chat,
+                    icon: Icons.shopping_bag_outlined,
                     height: 56,
-                    onPressed: () => _placeOrder(cart, cartItems),
+                    onPressed: () {
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user == null) {
+                        context.go('/auth');
+                        return;
+                      }
+                      context.go('/checkout');
+                    },
                   ),
                 ),
               ],

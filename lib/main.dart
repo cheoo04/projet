@@ -21,6 +21,7 @@ import 'screens/modern_home_screen.dart';
 import 'screens/modern_catalog_screen.dart';
 import 'screens/modern_product_detail_screen.dart';
 import 'screens/modern_cart_screen.dart';
+import 'screens/checkout_screen.dart';
 import 'screens/comparison_screen.dart';
 import 'screens/admin_screens_loader.dart'; // Chargement différé admin
 import 'screens/auth_screen.dart';
@@ -175,6 +176,7 @@ class MyApp extends StatelessWidget {
               '/home': (context) => const ModernHomeScreen(),
               '/catalog': (context) => const ModernCatalogScreen(),
               '/cart': (context) => const ModernCartScreen(),
+              '/checkout': (context) => const CheckoutScreen(),
               '/comparison': (context) => const ComparisonScreen(),
               '/auth': (context) => const AuthScreen(),
               '/account': (context) => const AccountScreen(),
