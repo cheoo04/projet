@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -698,8 +699,15 @@ class _ModernAdminDashboardScreenState extends State<ModernAdminDashboardScreen>
   
   /// Liste des notifications
   Widget _buildNotificationsList(BuildContext context) {
-    return FutureBuilder<List<AppNotification>>(
-      future: NotificationService().getNotifications(limit: 20),
+    return StreamBuilder<List<AppNotification>>(
+      stream: FirebaseFirestore.instance
+          .collection('notifications')
+          .orderBy('createdAt', descending: true)
+          .limit(20)
+          .snapshots()
+          .map((s) => s.docs
+              .map((d) => AppNotification.fromMap(d.data()))
+              .toList()),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
