@@ -374,11 +374,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Column(
                     children: [
                       _field(_nameController, 'Nom complet', Icons.person,
-                          required: true),
+                          required: true,
+                          extraValidator: (v) {
+                            if (v == null || v.trim().length < 3) {
+                              return 'Minimum 3 caractères';
+                            }
+                            if (RegExp(r'\d').hasMatch(v)) {
+                              return 'Le nom ne doit pas contenir de chiffres';
+                            }
+                            return null;
+                          }),
                       const SizedBox(height: 12),
                       _field(_phoneController, 'Téléphone', Icons.phone,
                           required: true,
-                          keyboardType: TextInputType.phone),
+                          keyboardType: TextInputType.phone,
+                          extraValidator: (v) {
+                            if (v == null) return 'Champ requis';
+                            final clean = v.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+                            if (!RegExp(r'^\+?\d{8,15}$').hasMatch(clean)) {
+                              return 'Format invalide (ex: 0788711896 ou +2250788711896)';
+                            }
+                            return null;
+                          }),
                     ],
                   ),
                 ),
@@ -397,10 +414,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     children: [
                       _field(_addressController, 'Quartier / Rue',
                           Icons.location_on,
-                          required: true),
+                          required: true,
+                          extraValidator: (v) {
+                            if (v != null && v.trim().length < 5) {
+                              return 'Adresse trop courte (minimum 5 caractères)';
+                            }
+                            return null;
+                          }),
                       const SizedBox(height: 12),
                       _field(_cityController, 'Ville', Icons.location_city,
-                          required: true),
+                          required: true,
+                          extraValidator: (v) {
+                            if (v != null && v.trim().length < 2) {
+                              return 'Ville trop courte';
+                            }
+                            if (v != null && RegExp(r'\d').hasMatch(v.trim())) {
+                              return 'Le nom de ville ne doit pas contenir de chiffres';
+                            }
+                            return null;
+                          }),
                       const SizedBox(height: 12),
                       _field(_notesController, 'Instructions (optionnel)',
                           Icons.note,
@@ -584,6 +616,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     bool required = true,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    String? Function(String?)? extraValidator,
   }) =>
       TextFormField(
         controller: controller,
@@ -594,9 +627,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           prefixIcon: Icon(icon),
           border: const OutlineInputBorder(),
         ),
-        validator: required
-            ? (v) => (v == null || v.trim().isEmpty) ? 'Champ requis' : null
-            : null,
+        validator: (v) {
+          if (required && (v == null || v.trim().isEmpty)) {
+            return 'Champ requis';
+          }
+          if (extraValidator != null) return extraValidator(v);
+          return null;
+        },
       );
 
   Widget _totalRow(String label, String value,

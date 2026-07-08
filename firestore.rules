@@ -120,10 +120,11 @@ service cloud.firestore {
       // Lecture : propriétaire de la commande ou admin (admins peuvent lire toutes les commandes)
       allow read: if isOwner(resource.data.userId) || isAdmin();
       
-      // Création : seulement clients pour eux-mêmes
-      allow create: if isClient() && 
+      // Création : utilisateur authentifié pour lui-même
+      // (clients ET admins peuvent passer commande)
+      allow create: if isAuthenticated() && 
                        isOwner(request.resource.data.userId) &&
-                       request.resource.data.keys().hasAll(['userId', 'items', 'totalAmount', 'status', 'createdAt']);
+                       request.resource.data.keys().hasAll(['userId', 'items', 'status', 'createdAt']);
       
       // Mise à jour : admin seulement (pour changer le statut)
       allow update: if isAdmin();
