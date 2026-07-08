@@ -99,6 +99,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           .where((e) => e['product'] != null)
           .toList();
 
+      debugPrint('🛒 Checkout - cartItems: ${cartItems.length} produits');
+      if (cartItems.isEmpty) {
+        throw Exception('Le panier est vide ou les produits ne sont pas chargés');
+      }
+
       // 1. Utiliser les points si demandé
       int pointsRedeemed = 0;
       int discountAmount = 0;
@@ -251,7 +256,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
           ElevatedButton(
             onPressed: () {
-              context.pop(); // ferme dialog
+              Navigator.of(context).pop(); // ferme dialog
               context.go('/'); // retour accueil
             },
             style: ElevatedButton.styleFrom(
