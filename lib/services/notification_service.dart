@@ -84,7 +84,7 @@ class NotificationService {
     // Obtenir tous les utilisateurs admin
     final adminUsers = await _firestore
         .collection('users')
-        .where('role', isEqualTo: 'UserRole.admin')
+        .where('role', whereIn: ['admin', 'manager'])
         .get();
 
     final batch = _firestore.batch();

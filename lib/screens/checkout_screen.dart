@@ -152,12 +152,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       await OrderService().add(order);
 
+      // Sauvegarder le total AVANT de vider le panier
+      final confirmedTotal = _total;
+
       // 3. Notifier l'admin
       try {
         // Notifier les admins de la nouvelle commande
         await NotificationService().createForAllAdmins(
           title: '🛒 Nouvelle commande',
-          message: '${_nameController.text.trim()} — ${_total.toStringAsFixed(0)} FCFA',
+          message: '${_nameController.text.trim()} — ${confirmedTotal.toStringAsFixed(0)} FCFA',
           type: NotificationType.order,
           entityId: order.id,
         );
@@ -168,7 +171,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
       // 5. Afficher confirmation
       if (mounted) {
-        _showConfirmation(order.id, discountAmount);
+        _showConfirmation(order.id, discountAmount, confirmedTotal);
       }
     } catch (e) {
       if (mounted) {
@@ -184,7 +187,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  void _showConfirmation(String orderId, int discountAmount) {
+  void _showConfirmation(String orderId, int discountAmount, double confirmedTotal) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -229,7 +232,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
               child: Column(
                 children: [
-                  _confirmRow('Total', '${_total.toStringAsFixed(0)} FCFA'),
+                  _confirmRow('Total', '${confirmedTotal.toStringAsFixed(0)} FCFA'),
                   if (_paymentMethod == 'wave') ...[
                     const SizedBox(height: 6),
                     _confirmRow('Paiement', 'Wave Mobile Money'),
