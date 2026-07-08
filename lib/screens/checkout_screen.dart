@@ -6,10 +6,12 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/app_theme.dart';
 import '../models/order.dart' as order_model;
+import '../models/product.dart';
 import '../providers/app_providers.dart';
 import '../services/order_service.dart';
 import '../services/loyalty_service.dart';
 import '../services/notification_service.dart';
+import '../models/notification.dart';
 import '../widgets/responsive_scaffold.dart';
 import 'package:provider/provider.dart';
 
@@ -87,8 +89,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (user == null) throw Exception('Non connecté');
 
       final cart = Provider.of<CartProvider>(context, listen: false);
+      // items = Map<String, int> (productId → quantity)
+      // products = Map<String, Product> (productId → Product)
       final cartItems = cart.items.entries
-          .map((e) => {'product': e.value['product'], 'quantity': e.value['quantity']})
+          .map((e) => {
+                'product': cart.products[e.key],
+                'quantity': e.value,
+              })
+          .where((e) => e['product'] != null)
           .toList();
 
       // 1. Utiliser les points si demandé
@@ -113,12 +121,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         customerPhone: _phoneController.text.trim(),
         deliveryAddress: deliveryAddress,
         items: cartItems
-            .map((item) => order_model.OrderItem(
-                  productId: item['product'].id as String,
-                  productName: item['product'].name as String,
-                  unitPrice: (item['product'].price as num).toDouble(),
-                  quantity: item['quantity'] as int,
-                ))
+            .map((item) {
+              final product = item['product'] as Product;
+              return order_model.OrderItem(
+                productId: product.id,
+                productName: product.name,
+                unitPrice: product.price,
+                quantity: item['quantity'] as int,
+              );
+            })
             .toList(),
         status: order_model.OrderStatus.pending,
         createdAt: now,
@@ -286,7 +297,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();
-    final cartItems = cart.items.entries.toList();
+    // Construire une liste {product, quantity} pour l'affichage
+    final cartItems = cart.items.entries
+        .map((e) => {'product': cart.products[e.key], 'quantity': e.value})
+        .where((e) => e['product'] != null)
+        .toList();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ResponsiveScaffold(
@@ -314,8 +329,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   separatorBuilder: (_, __) =>
                       const Divider(height: 1),
                   itemBuilder: (context, i) {
-                    final item = cartItems[i].value;
-                    final product = item['product'];
+                    final item = cartItems[i];
+                    final product = item['product'] as Product;
                     final qty = item['quantity'] as int;
                     return ListTile(
                       leading: CircleAvatar(
@@ -328,11 +343,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               fontWeight: FontWeight.bold),
                         ),
                       ),
-                      title: Text(product.name as String,
+                      title: Text(product.name,
                           style: const TextStyle(
                               fontWeight: FontWeight.w500)),
                       trailing: Text(
-                        '${((product.price as num) * qty).toStringAsFixed(0)} FCFA',
+                        '${(product.price * qty).toStringAsFixed(0)} FCFA',
                         style: TextStyle(
                             color: AppTheme.primaryViolet,
                             fontWeight: FontWeight.bold),
