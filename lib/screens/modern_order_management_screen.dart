@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../config/app_theme.dart';
+import '../models/order.dart';
+import '../services/order_service.dart';
 import '../widgets/ui_components.dart';
 
 /// Écran moderne de gestion des commandes
@@ -63,35 +65,79 @@ class _ModernOrderManagementScreenState
   }
 
   Widget _buildPendingOrders() {
-    return _buildOrdersPlaceholder(
-      icon: Icons.shopping_bag_outlined,
-      title: 'Commandes en attente',
-      message:
-          'Les commandes passées via WhatsApp apparaîtront ici.\n\n'
-          'Actuellement, les commandes sont gérées directement sur WhatsApp.',
-      actions: [
-        ElevatedButton.icon(
-          onPressed: () => _openWhatsAppApp(context),
-          icon: const Icon(Icons.chat),
-          label: const Text('Ouvrir WhatsApp'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF25D366),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-        ),
-      ],
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('orders')
+          .where('status', whereIn: ['pending', 'confirmed', 'processing'])
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.shopping_bag_outlined, size: 64, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                Text('Aucune commande en attente',
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+              ],
+            ),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: docs.length,
+          itemBuilder: (context, i) {
+            final data = docs[i].data() as Map<String, dynamic>;
+            final order = Order.fromMap(data, docs[i].id);
+            return _OrderCard(order: order);
+          },
+        );
+      },
     );
   }
 
   Widget _buildCompletedOrders() {
-    return _buildOrdersPlaceholder(
-      icon: Icons.check_circle_outline,
-      title: 'Commandes complétées',
-      message:
-          'L\'historique des commandes apparaîtra ici.\n\n'
-          'Cette fonctionnalité sera disponible dans une prochaine version.',
-      color: AppTheme.success,
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('orders')
+          .where('status', whereIn: ['delivered', 'cancelled'])
+          .orderBy('createdAt', descending: true)
+          .limit(50)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.check_circle_outline, size: 64, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                Text('Aucune commande complétée',
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+              ],
+            ),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.all(12),
+          itemCount: docs.length,
+          itemBuilder: (context, i) {
+            final data = docs[i].data() as Map<String, dynamic>;
+            final order = Order.fromMap(data, docs[i].id);
+            return _OrderCard(order: order, showActions: false);
+          },
+        );
+      },
     );
   }
 
@@ -422,6 +468,191 @@ class _ModernOrderManagementScreenState
             backgroundColor: Colors.red,
             duration: Duration(seconds: 3),
           ),
+        );
+      }
+    }
+  }
+}
+
+/// Card d'une commande dans la liste admin
+class _OrderCard extends StatelessWidget {
+  final Order order;
+  final bool showActions;
+
+  const _OrderCard({required this.order, this.showActions = true});
+
+  Color get _statusColor {
+    switch (order.status) {
+      case OrderStatus.pending: return Colors.orange;
+      case OrderStatus.confirmed: return Colors.blue;
+      case OrderStatus.processing: return Colors.purple;
+      case OrderStatus.shipped: return Colors.teal;
+      case OrderStatus.delivered: return Colors.green;
+      case OrderStatus.cancelled: return Colors.red;
+      default: return Colors.grey;
+    }
+  }
+
+  String get _statusLabel {
+    switch (order.status) {
+      case OrderStatus.pending: return 'En attente';
+      case OrderStatus.confirmed: return 'Confirmée';
+      case OrderStatus.processing: return 'En traitement';
+      case OrderStatus.shipped: return 'Expédiée';
+      case OrderStatus.delivered: return 'Livrée';
+      case OrderStatus.cancelled: return 'Annulée';
+      default: return 'Inconnue';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = NumberFormat('#,###', 'fr_FR');
+    final date = DateFormat('dd/MM/yyyy HH:mm').format(order.createdAt);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        title: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    order.customerName,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '${fmt.format(order.totalAmount)} FCFA · $date',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: _statusColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                _statusLabel,
+                style: TextStyle(
+                    color: _statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Divider(),
+                // Infos client
+                _infoRow(Icons.phone, order.customerPhone),
+                if (order.deliveryAddress.isNotEmpty)
+                  _infoRow(Icons.location_on, order.deliveryAddress),
+                if (order.notes != null && order.notes!.isNotEmpty)
+                  _infoRow(Icons.note, order.notes!),
+                const SizedBox(height: 8),
+                // Produits
+                ...order.items.map((item) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('${item.quantity}× ${item.productName}',
+                              style: const TextStyle(fontSize: 13)),
+                          Text('${fmt.format(item.totalPrice)} FCFA',
+                              style: const TextStyle(fontSize: 13)),
+                        ],
+                      ),
+                    )),
+                const Divider(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('TOTAL',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('${fmt.format(order.totalAmount)} FCFA',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryViolet)),
+                  ],
+                ),
+                if (showActions) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _updateStatus(context, OrderStatus.cancelled),
+                          icon: const Icon(Icons.cancel, size: 16),
+                          label: const Text('Annuler'),
+                          style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _updateStatus(context, OrderStatus.confirmed),
+                          icon: const Icon(Icons.check, size: 16),
+                          label: const Text('Confirmer'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String text) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            Icon(icon, size: 14, color: Colors.grey),
+            const SizedBox(width: 6),
+            Expanded(
+                child: Text(text, style: const TextStyle(fontSize: 13))),
+          ],
+        ),
+      );
+
+  Future<void> _updateStatus(BuildContext context, OrderStatus status) async {
+    try {
+      await OrderService().updateStatus(order.id, status);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(status == OrderStatus.confirmed
+                ? 'Commande confirmée ✅'
+                : 'Commande annulée'),
+            backgroundColor:
+                status == OrderStatus.confirmed ? Colors.green : Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
         );
       }
     }

@@ -5,6 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import '../web_config/web_router.dart';
+import '../web_config/navigation_helper.dart';
 
 /// Handler pour les messages en arrière-plan (doit être une fonction top-level)
 @pragma('vm:entry-point')
@@ -249,23 +251,22 @@ class FCMService {
     debugPrint('🧭 Navigation: type=$type, entityId=$entityId');
     
     // Navigation selon le type de notification
+    final context = WebRouter.navigatorKey.currentContext;
+    if (context == null) return;
+
     switch (type) {
       case 'order':
-        // Naviguer vers l'écran des commandes
-        debugPrint('Navigation vers /my-orders');
+        AppNavigator.go(context, '/my-orders');
         break;
       case 'stock':
-        // Naviguer vers l'écran de gestion de stock
-        debugPrint('Navigation vers stock management');
+        AppNavigator.go(context, '/admin');
         break;
       case 'promotion':
-        // Naviguer vers l'écran des promotions
-        debugPrint('Navigation vers promotions');
+        AppNavigator.go(context, '/catalog');
         break;
       case 'product':
-        // Naviguer vers le détail du produit
         if (entityId != null) {
-          debugPrint('Navigation vers product/$entityId');
+          AppNavigator.toProductDetail(context, entityId);
         }
         break;
       default:
