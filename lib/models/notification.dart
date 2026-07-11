@@ -39,12 +39,25 @@ class AppNotification {
       'id': id,
       'title': title,
       'message': message,
-      'type': type.toString(),
+      // Requis par la Cloud Function `sendPushNotification` (interface
+      // NotificationData côté functions/src/index.ts) : sans ce champ,
+      // la notification push part avec un corps de message vide.
+      'body': message,
+      // 'order' et non 'NotificationType.order' — la Cloud Function
+      // compare cette valeur à des chaînes comme "order"/"product" pour
+      // construire le lien de redirection de la notification.
+      'type': type.name,
       'entityId': entityId,
       'entityType': entityType,
       'createdAt': createdAt.millisecondsSinceEpoch,
       'isRead': isRead,
       'userId': userId,
+      // Sans ces deux champs, la Cloud Function considère la notification
+      // comme destinée à "all" (tous les utilisateurs) au lieu du seul
+      // destinataire visé par `userId` — c'était la cause d'un envoi en
+      // masse à tous les clients à chaque notification admin.
+      'targetType': 'specific',
+      'targetUserIds': [userId],
       'data': data,
       'priority': priority.toString(),
     };

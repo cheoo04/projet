@@ -16,6 +16,7 @@ import '../widgets/similar_products_section.dart';
 import '../widgets/add_review_dialog.dart';
 import '../widgets/comparison_banner.dart';
 import '../widgets/responsive_scaffold.dart';
+import '../widgets/product_video_page.dart';
 import '../models/product.dart';
 import '../models/product_extensions.dart';
 import '../models/review.dart';
@@ -26,6 +27,16 @@ import '../services/review_service.dart';
 import '../web_config/navigation_helper.dart';
 import 'all_reviews_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+/// Un élément de la galerie produit : soit une image, soit une vidéo.
+/// Les vidéos sont ajoutées à la suite des images ; quand l'utilisateur
+/// glisse jusqu'à une vidéo, elle démarre automatiquement (voir
+/// [ProductVideoPage]).
+class _GalleryMediaItem {
+  final String url;
+  final bool isVideo;
+  const _GalleryMediaItem(this.url, {this.isVideo = false});
+}
 
 /// Écran de détail produit avec design moderne
 class ModernProductDetailScreen extends StatefulWidget {
@@ -265,6 +276,13 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
     final images = _product!.imageUrls.isNotEmpty 
         ? _product!.imageUrls 
         : ['https://via.placeholder.com/400x300'];
+
+    // Galerie combinée : images d'abord, puis vidéos (max 2) à la suite —
+    // le client glisse et, en arrivant sur une vidéo, elle joue automatiquement.
+    final media = <_GalleryMediaItem>[
+      ...images.map((url) => _GalleryMediaItem(url)),
+      ..._product!.videoUrls.map((url) => _GalleryMediaItem(url, isVideo: true)),
+    ];
     
     return ResponsiveScaffold(
       showDesktopHeader: true,
@@ -273,7 +291,7 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
           CustomScrollView(
             slivers: [
               // App Bar avec image et bouton retour
-              _buildAppBar(context, isDark, images),
+              _buildAppBar(context, isDark, media),
 
               // Contenu
               SliverToBoxAdapter(
@@ -337,8 +355,8 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
     );
   }
   
-  /// App Bar avec galerie d'images
-  Widget _buildAppBar(BuildContext context, bool isDark, List<String> images) {
+  /// App Bar avec galerie d'images et de vidéos
+  Widget _buildAppBar(BuildContext context, bool isDark, List<_GalleryMediaItem> media) {
     final expandedHeight = (MediaQuery.of(context).size.height * 0.45).clamp(260.0, 400.0) as double;
 
     return SliverAppBar(
@@ -415,15 +433,22 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
       flexibleSpace: FlexibleSpaceBar(
         background: Stack(
           children: [
-            // Carrousel d'images
+            // Carrousel d'images et de vidéos
             PageView.builder(
-              itemCount: images.length,
+              itemCount: media.length,
               onPageChanged: (index) {
                 setState(() => _currentImageIndex = index);
               },
               itemBuilder: (context, index) {
+                final item = media[index];
+                if (item.isVideo) {
+                  return ProductVideoPage(
+                    videoUrl: item.url,
+                    isActive: index == _currentImageIndex,
+                  );
+                }
                 return ProductImage(
-                  imageUrl: images[index],
+                  imageUrl: item.url,
                   fit: BoxFit.cover,
                 );
               },
@@ -437,7 +462,7 @@ class _ModernProductDetailScreenState extends State<ModernProductDetailScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
-                  images.length,
+                  media.length,
                   (index) => Container(
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     width: index == _currentImageIndex ? 24 : 8,

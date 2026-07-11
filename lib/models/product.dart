@@ -2,6 +2,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'product_extensions.dart';
 
 class Product {
+  /// Nombre maximum de vidéos autorisées par produit.
+  static const int maxVideos = 2;
+
+  /// Durée maximale (en secondes) autorisée par vidéo produit.
+  static const int maxVideoDurationSeconds = 30;
+
+  /// Taille maximale (en octets) recommandée par vidéo produit (~20 Mo).
+  /// Une vidéo de 30s bien compressée en H.264 tient largement dans cette
+  /// limite ; elle évite des uploads/chargements trop lents pour les
+  /// utilisateurs avec une connexion faible.
+  static const int maxVideoSizeBytes = 20 * 1024 * 1024;
+
   final String id;
   final String name;
   final String category; // 'phone', 'accessory', 'screen', 'pc'

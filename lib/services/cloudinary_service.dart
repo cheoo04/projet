@@ -26,6 +26,9 @@ class CloudinaryService {
   String get _uploadUrl =>
       'https://api.cloudinary.com/v1_1/$cloudName/image/upload';
 
+  String get _videoUploadUrl =>
+      'https://api.cloudinary.com/v1_1/$cloudName/video/upload';
+
   bool get isConfigured => cloudName != 'VOTRE_CLOUD_NAME';
 
   /// Upload unsigned (pour les utilisateurs normaux si besoin)
@@ -120,6 +123,62 @@ class CloudinaryService {
       }
     } catch (e) {
       debugPrint('❌ Exception Cloudinary signed: $e');
+      return null;
+    }
+  }
+
+  /// Upload vidéo signé (pour les admins — signature générée par Cloud Function)
+  /// Même principe que [uploadImageSigned] mais pointe vers l'endpoint vidéo
+  /// de Cloudinary. L'apiSecret ne quitte JAMAIS le serveur Firebase.
+  Future<String?> uploadVideoSigned(
+    Uint8List videoBytes, {
+    String? folder,
+    String? publicId,
+    void Function(double progress)? onProgress,
+  }) async {
+    try {
+      if (!isConfigured) return null;
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+      final paramsToSign = <String, String>{
+        'timestamp': timestamp.toString(),
+      };
+      if (folder != null) paramsToSign['folder'] = folder;
+      if (publicId != null) paramsToSign['public_id'] = publicId;
+
+      final signature = await _getSignatureFromServer(paramsToSign);
+      if (signature == null) return null;
+
+      final uri = Uri.parse(_videoUploadUrl);
+      final request = http.MultipartRequest('POST', uri);
+
+      request.files.add(http.MultipartFile.fromBytes(
+        'file',
+        videoBytes,
+        filename: '${publicId ?? DateTime.now().millisecondsSinceEpoch}.mp4',
+      ));
+
+      request.fields['api_key'] = apiKey;
+      request.fields['timestamp'] = timestamp.toString();
+      request.fields['signature'] = signature;
+      if (folder != null) request.fields['folder'] = folder;
+      if (publicId != null) request.fields['public_id'] = publicId;
+
+      final response = await request.send();
+      final responseBody = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        final data = json.decode(responseBody);
+        final url = data['secure_url'] as String;
+        debugPrint('✅ Vidéo uploadée (signed): $url');
+        return url;
+      } else {
+        debugPrint('❌ Erreur Cloudinary vidéo: ${response.statusCode} - $responseBody');
+        return null;
+      }
+    } catch (e) {
+      debugPrint('❌ Exception Cloudinary vidéo: $e');
       return null;
     }
   }
@@ -231,6 +290,39 @@ class CloudinaryService {
       return false;
     } catch (e) {
       debugPrint('❌ Erreur suppression Cloudinary: $e');
+      return false;
+    }
+  }
+
+  /// Supprime une vidéo — signature générée par Cloud Function
+  Future<bool> deleteVideo(String publicId) async {
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      final params = {
+        'public_id': publicId,
+        'timestamp': timestamp.toString(),
+      };
+
+      final signature = await _getSignatureFromServerForDelete(params);
+      if (signature == null) return false;
+
+      final response = await http.post(
+        Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/video/destroy'),
+        body: {
+          'public_id': publicId,
+          'api_key': apiKey,
+          'timestamp': timestamp.toString(),
+          'signature': signature,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['result'] == 'ok';
+      }
+      return false;
+    } catch (e) {
+      debugPrint('❌ Erreur suppression vidéo Cloudinary: $e');
       return false;
     }
   }

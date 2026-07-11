@@ -35,7 +35,11 @@ class NotificationsScreen extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('notifications')
-            .where('userId', isEqualTo: user.uid)
+            // 'broadcast' = notifications envoyées à tous/à un groupe depuis
+            // le dashboard admin (voir NotificationService.sendPushNotification) ;
+            // sans ça, seules les notifications individuelles (commande,
+            // stock...) remonteraient dans cet historique.
+            .where('userId', whereIn: [user.uid, 'broadcast'])
             .orderBy('createdAt', descending: true)
             .limit(50)
             .snapshots(),

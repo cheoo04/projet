@@ -58,6 +58,15 @@ class NotificationService {
     final notificationDoc = {
       'title': title,
       'body': body,
+      // Alias pour rester lisible par AppNotification.fromMap() (qui lit
+      // 'message' en priorité) dans l'écran client "Notifications".
+      'message': body,
+      // Sentinelle : ce document n'appartient à aucun utilisateur précis
+      // (diffusion large), mais sans champ `userId` du tout, il resterait
+      // invisible dans l'historique in-app du client (notifications_screen.dart
+      // filtre par userId). Le client interroge désormais
+      // `userId in [monUid, 'broadcast']` pour retrouver aussi ces envois.
+      'userId': 'broadcast',
       'type': type.name,
       'targetType': targetType.name,
       if (targetUserIds != null) 'targetUserIds': targetUserIds,

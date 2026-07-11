@@ -4,7 +4,6 @@ import '../config/app_theme.dart';
 import '../widgets/ui_components.dart';
 import '../models/notification.dart' as model;
 import '../services/notification_service.dart';
-import '../services/vercel_notification_service.dart';
 
 /// Écran moderne de gestion des notifications
 /// Permet d'envoyer des notifications et de voir l'historique
@@ -21,7 +20,6 @@ class _ModernNotificationManagementScreenState
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final NotificationService _notificationService = NotificationService();
-  final VercelNotificationService _vercelService = VercelNotificationService();
   final _formKey = GlobalKey<FormState>();
   
   final _titleController = TextEditingController();
@@ -645,36 +643,15 @@ class _ModernNotificationManagementScreenState
     setState(() => _isSending = true);
 
     try {
-      // Déterminer le topic FCM selon la cible
-      String topic;
-      switch (_selectedTarget) {
-        case NotificationTargetType.clients:
-          topic = 'clients';
-          break;
-        case NotificationTargetType.admins:
-          topic = 'admins';
-          break;
-        case NotificationTargetType.all:
-        default:
-          topic = 'all_users';
-          break;
-      }
-
-      // Envoyer via l'API Vercel (gratuit !)
-      final result = await _vercelService.sendNotification(
-        title: _titleController.text,
-        body: _bodyController.text,
-        topic: topic,
-        data: {
-          'type': _selectedType.name,
-        },
-      );
-
-      if (!result.success) {
-        throw Exception(result.error ?? 'Erreur inconnue');
-      }
-
-      // Aussi sauvegarder dans Firestore pour l'historique
+      // Sauvegarder dans Firestore : déclenche la Cloud Function
+      // `sendPushNotification` qui envoie la vraie notification push
+      // (par token FCM individuel — fonctionne sur web ET mobile).
+      //
+      // Note : un envoi parallèle via l'API Vercel existait ici avant, en
+      // plus de celui-ci. Il a été retiré car redondant — il ciblait des
+      // topics FCM auxquels les utilisateurs web ne peuvent pas s'abonner
+      // (subscribeToTopic est un no-op sur web), et sur mobile il aurait
+      // fait recevoir la même notification deux fois à chaque utilisateur.
       await _notificationService.sendPushNotification(
         title: _titleController.text,
         body: _bodyController.text,

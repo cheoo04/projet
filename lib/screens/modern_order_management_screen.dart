@@ -69,7 +69,7 @@ class _ModernOrderManagementScreenState
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('orders')
-          .where('status', whereIn: ['pending', 'confirmed', 'processing'])
+          .where('status', whereIn: ['pending', 'confirmed', 'preparing', 'shipped'])
           .orderBy('createdAt', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
@@ -486,7 +486,7 @@ class _OrderCard extends StatelessWidget {
     switch (order.status) {
       case order_model.OrderStatus.pending: return Colors.orange;
       case order_model.OrderStatus.confirmed: return Colors.blue;
-      case order_model.OrderStatus.shipped: return Colors.purple;
+      case order_model.OrderStatus.preparing: return Colors.purple;
       case order_model.OrderStatus.shipped: return Colors.teal;
       case order_model.OrderStatus.delivered: return Colors.green;
       case order_model.OrderStatus.cancelled: return Colors.red;
@@ -498,7 +498,7 @@ class _OrderCard extends StatelessWidget {
     switch (order.status) {
       case order_model.OrderStatus.pending: return 'En attente';
       case order_model.OrderStatus.confirmed: return 'Confirmée';
-      case order_model.OrderStatus.shipped: return 'En traitement';
+      case order_model.OrderStatus.preparing: return 'En préparation';
       case order_model.OrderStatus.shipped: return 'Expédiée';
       case order_model.OrderStatus.delivered: return 'Livrée';
       case order_model.OrderStatus.cancelled: return 'Annulée';

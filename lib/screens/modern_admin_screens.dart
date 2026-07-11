@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../config/app_theme.dart';
 import '../widgets/ui_components.dart';
 import '../providers/app_providers.dart';
@@ -13,6 +14,7 @@ import 'modern_admin_products_screen.dart';
 import 'modern_stock_management_screen.dart';
 import 'modern_order_management_screen.dart';
 import '../services/order_service.dart';
+import '../models/order.dart' as order_model;
 import 'modern_category_management_screen.dart';
 import 'promotion_management_screen.dart';
 import 'user_management_screen.dart';
@@ -403,6 +405,8 @@ class _ModernAdminDashboardScreenState extends State<ModernAdminDashboardScreen>
   int _outOfStock = 0;
   int _notifications = 0;
   int _totalOrders = 0;
+  double _thisMonthRevenue = 0;
+  int _pendingOrders = 0;
   bool _isLoading = true;
   
   @override
@@ -428,12 +432,22 @@ class _ModernAdminDashboardScreenState extends State<ModernAdminDashboardScreen>
 
       // Charger les stats commandes réelles depuis Firestore
       final orderStats = await OrderService().getOrderStats();
-      
+      final statusCounts =
+          orderStats['statusCounts'] as Map<order_model.OrderStatus, int>? ??
+              {};
+      final pendingOrders =
+          (statusCounts[order_model.OrderStatus.pending] ?? 0) +
+          (statusCounts[order_model.OrderStatus.confirmed] ?? 0) +
+          (statusCounts[order_model.OrderStatus.preparing] ?? 0) +
+          (statusCounts[order_model.OrderStatus.shipped] ?? 0);
+
       setState(() {
         _totalProducts = products.length;
         _outOfStock = outOfStock;
         _notifications = notifications.length;
         _totalOrders = orderStats['totalOrders'] as int? ?? 0;
+        _thisMonthRevenue = (orderStats['thisMonthRevenue'] as num?)?.toDouble() ?? 0;
+        _pendingOrders = pendingOrders;
         _isLoading = false;
       });
     } catch (e) {
@@ -544,11 +558,14 @@ class _ModernAdminDashboardScreenState extends State<ModernAdminDashboardScreen>
       );
     }
     
+    final currencyFmt = NumberFormat('#,###', 'fr_FR');
     final stats = [
       {'label': 'Produits', 'value': '$_totalProducts', 'icon': Icons.inventory, 'color': AppTheme.primaryViolet},
       {'label': 'Ruptures', 'value': '$_outOfStock', 'icon': Icons.warning, 'color': AppTheme.error},
       {'label': 'Notifications', 'value': '$_notifications', 'icon': Icons.notifications, 'color': AppTheme.warning},
       {'label': 'Commandes', 'value': '$_totalOrders', 'icon': Icons.shopping_bag, 'color': AppTheme.success},
+      {'label': 'À traiter', 'value': '$_pendingOrders', 'icon': Icons.pending_actions, 'color': AppTheme.warning},
+      {'label': 'Revenu du mois', 'value': '${currencyFmt.format(_thisMonthRevenue)} FCFA', 'icon': Icons.attach_money, 'color': AppTheme.success},
     ];
     
     return GridView.builder(
@@ -597,16 +614,26 @@ class _ModernAdminDashboardScreenState extends State<ModernAdminDashboardScreen>
                   ),
                   child: Icon(icon, color: color, size: 20),
                 ),
-                Text(
-                  label,
-                  style: theme.textTheme.bodySmall,
+                Flexible(
+                  child: Text(
+                    label,
+                    style: theme.textTheme.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                  ),
                 ),
               ],
             ),
-            Text(
-              value,
-              style: theme.textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.bold,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                maxLines: 1,
+                style: theme.textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
