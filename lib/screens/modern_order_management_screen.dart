@@ -484,24 +484,24 @@ class _OrderCard extends StatelessWidget {
 
   Color get _statusColor {
     switch (order.status) {
-      case order_model.order_model.OrderStatus.pending: return Colors.orange;
-      case order_model.order_model.OrderStatus.confirmed: return Colors.blue;
-      case order_model.order_model.OrderStatus.shipped: return Colors.purple;
-      case order_model.order_model.OrderStatus.shipped: return Colors.teal;
-      case order_model.order_model.OrderStatus.delivered: return Colors.green;
-      case order_model.order_model.OrderStatus.cancelled: return Colors.red;
+      case order_model.OrderStatus.pending: return Colors.orange;
+      case order_model.OrderStatus.confirmed: return Colors.blue;
+      case order_model.OrderStatus.shipped: return Colors.purple;
+      case order_model.OrderStatus.shipped: return Colors.teal;
+      case order_model.OrderStatus.delivered: return Colors.green;
+      case order_model.OrderStatus.cancelled: return Colors.red;
       default: return Colors.grey;
     }
   }
 
   String get _statusLabel {
     switch (order.status) {
-      case order_model.order_model.OrderStatus.pending: return 'En attente';
-      case order_model.order_model.OrderStatus.confirmed: return 'Confirmée';
-      case order_model.order_model.OrderStatus.shipped: return 'En traitement';
-      case order_model.order_model.OrderStatus.shipped: return 'Expédiée';
-      case order_model.order_model.OrderStatus.delivered: return 'Livrée';
-      case order_model.order_model.OrderStatus.cancelled: return 'Annulée';
+      case order_model.OrderStatus.pending: return 'En attente';
+      case order_model.OrderStatus.confirmed: return 'Confirmée';
+      case order_model.OrderStatus.shipped: return 'En traitement';
+      case order_model.OrderStatus.shipped: return 'Expédiée';
+      case order_model.OrderStatus.delivered: return 'Livrée';
+      case order_model.OrderStatus.cancelled: return 'Annulée';
       default: return 'Inconnue';
     }
   }
@@ -636,7 +636,7 @@ class _OrderCard extends StatelessWidget {
         ),
       );
 
-  Future<void> _updateStatus(BuildContext context, OrderStatus status) async {
+  Future<void> _updateStatus(BuildContext context, order_model.OrderStatus status) async {
     try {
       await order_service.OrderService().updateStatus(order.id, status);
       if (context.mounted) {
