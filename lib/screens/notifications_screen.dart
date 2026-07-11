@@ -126,8 +126,8 @@ class _NotifCard extends StatelessWidget {
     // Naviguer selon le type
     if (notif.entityId != null && notif.type == NotificationType.order) {
       AppNavigator.go(context, '/my-orders');
-    } else if (notif.entityId != null &&
-        notif.type == NotificationType.product) {
+    } else if (notif.entityId != null) {
+      // Tenter d'aller vers le produit si un entityId est présent
       AppNavigator.toProductDetail(context, notif.entityId!);
     } else {
       // Afficher les détails dans un dialog

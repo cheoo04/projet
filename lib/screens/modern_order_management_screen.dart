@@ -1,9 +1,10 @@
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../config/app_theme.dart';
-import '../models/order.dart';
-import '../services/order_service.dart';
+import '../models/order.dart' as order_model;
+import '../services/order_service.dart' as order_service;
 import '../widgets/ui_components.dart';
 
 /// Écran moderne de gestion des commandes
@@ -94,7 +95,7 @@ class _ModernOrderManagementScreenState
           itemCount: docs.length,
           itemBuilder: (context, i) {
             final data = docs[i].data() as Map<String, dynamic>;
-            final order = Order.fromMap(data, docs[i].id);
+            final order = order_model.Order.fromMap(data, docs[i].id);
             return _OrderCard(order: order);
           },
         );
@@ -133,7 +134,7 @@ class _ModernOrderManagementScreenState
           itemCount: docs.length,
           itemBuilder: (context, i) {
             final data = docs[i].data() as Map<String, dynamic>;
-            final order = Order.fromMap(data, docs[i].id);
+            final order = order_model.Order.fromMap(data, docs[i].id);
             return _OrderCard(order: order, showActions: false);
           },
         );
@@ -476,31 +477,31 @@ class _ModernOrderManagementScreenState
 
 /// Card d'une commande dans la liste admin
 class _OrderCard extends StatelessWidget {
-  final Order order;
+  final order_model.Order order;
   final bool showActions;
 
   const _OrderCard({required this.order, this.showActions = true});
 
   Color get _statusColor {
     switch (order.status) {
-      case OrderStatus.pending: return Colors.orange;
-      case OrderStatus.confirmed: return Colors.blue;
-      case OrderStatus.processing: return Colors.purple;
-      case OrderStatus.shipped: return Colors.teal;
-      case OrderStatus.delivered: return Colors.green;
-      case OrderStatus.cancelled: return Colors.red;
+      case order_model.order_model.OrderStatus.pending: return Colors.orange;
+      case order_model.order_model.OrderStatus.confirmed: return Colors.blue;
+      case order_model.order_model.OrderStatus.shipped: return Colors.purple;
+      case order_model.order_model.OrderStatus.shipped: return Colors.teal;
+      case order_model.order_model.OrderStatus.delivered: return Colors.green;
+      case order_model.order_model.OrderStatus.cancelled: return Colors.red;
       default: return Colors.grey;
     }
   }
 
   String get _statusLabel {
     switch (order.status) {
-      case OrderStatus.pending: return 'En attente';
-      case OrderStatus.confirmed: return 'Confirmée';
-      case OrderStatus.processing: return 'En traitement';
-      case OrderStatus.shipped: return 'Expédiée';
-      case OrderStatus.delivered: return 'Livrée';
-      case OrderStatus.cancelled: return 'Annulée';
+      case order_model.order_model.OrderStatus.pending: return 'En attente';
+      case order_model.order_model.OrderStatus.confirmed: return 'Confirmée';
+      case order_model.order_model.OrderStatus.shipped: return 'En traitement';
+      case order_model.order_model.OrderStatus.shipped: return 'Expédiée';
+      case order_model.order_model.OrderStatus.delivered: return 'Livrée';
+      case order_model.order_model.OrderStatus.cancelled: return 'Annulée';
       default: return 'Inconnue';
     }
   }
@@ -593,7 +594,7 @@ class _OrderCard extends StatelessWidget {
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: () => _updateStatus(context, OrderStatus.cancelled),
+                          onPressed: () => _updateStatus(context, order_model.OrderStatus.cancelled),
                           icon: const Icon(Icons.cancel, size: 16),
                           label: const Text('Annuler'),
                           style: OutlinedButton.styleFrom(
@@ -603,7 +604,7 @@ class _OrderCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: () => _updateStatus(context, OrderStatus.confirmed),
+                          onPressed: () => _updateStatus(context, order_model.OrderStatus.confirmed),
                           icon: const Icon(Icons.check, size: 16),
                           label: const Text('Confirmer'),
                           style: ElevatedButton.styleFrom(
@@ -637,15 +638,15 @@ class _OrderCard extends StatelessWidget {
 
   Future<void> _updateStatus(BuildContext context, OrderStatus status) async {
     try {
-      await OrderService().updateStatus(order.id, status);
+      await order_service.OrderService().updateStatus(order.id, status);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(status == OrderStatus.confirmed
+            content: Text(status == order_model.OrderStatus.confirmed
                 ? 'Commande confirmée ✅'
                 : 'Commande annulée'),
             backgroundColor:
-                status == OrderStatus.confirmed ? Colors.green : Colors.red,
+                status == order_model.OrderStatus.confirmed ? Colors.green : Colors.red,
           ),
         );
       }
