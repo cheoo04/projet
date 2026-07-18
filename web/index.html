@@ -6,7 +6,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="Pharrell Phone - Boutique en ligne de smartphones et accessoires. Livraison rapide en Côte d'Ivoire.">
+  <meta name="description" content="Pharrell Phone — Boutique de smartphones à Abidjan, Côte d'Ivoire. Achetez iPhone, Samsung, Xiaomi neufs avec garantie. Livraison rapide à Abidjan et partout en Côte d'Ivoire. Paiement Wave, Orange Money ou à la livraison.">
   
   <!-- Google Search Console verification -->
   <meta name="google-site-verification" content="Gj5PmqJiyES4YfwtzvewAFJLr4H-0VRi-XQv46ZOA5w" />
@@ -14,8 +14,8 @@
   <!-- Open Graph / Facebook (image de prévisualisation) -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://pharrellphone.com/">
-  <meta property="og:title" content="Pharrell Phone - Boutique Smartphones">
-  <meta property="og:description" content="Boutique en ligne de smartphones et accessoires. Livraison rapide en Côte d'Ivoire.">
+  <meta property="og:title" content="Pharrell Phone — Boutique Smartphones à Abidjan, Côte d'Ivoire">
+  <meta property="og:description" content="Achetez vos smartphones iPhone, Samsung, Xiaomi neufs avec garantie. Livraison rapide à Abidjan et partout en Côte d'Ivoire. Paiement Wave, Orange Money ou espèces.">
   <meta property="og:image" content="https://pharrellphone.com/og-image.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
@@ -61,21 +61,61 @@
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": ["LocalBusiness", "Store", "ElectronicsStore"],
+        "@id": "https://pharrellphone.com/#business",
+        "name": "Pharrell Phone",
+        "alternateName": "Pharrell Phone Boutique Smartphones Abidjan",
+        "url": "https://pharrellphone.com",
+        "logo": "https://pharrellphone.com/icons/Icon-512.png",
+        "image": "https://pharrellphone.com/icons/Icon-512.png",
+        "description": "Pharrell Phone est une boutique de smartphones, accessoires et appareils connectés à Abidjan, Côte d'Ivoire. Achetez iPhone, Samsung, Xiaomi avec livraison rapide partout en Côte d'Ivoire.",
+        "telephone": "+225-07-88-71-18-96",
+        "email": "contact@pharrellphone.com",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "Abidjan",
+          "addressLocality": "Abidjan",
+          "addressRegion": "Lagunes",
+          "addressCountry": "CI"
+        },
+        "geo": {
+          "@type": "GeoCoordinates",
+          "latitude": 5.3599517,
+          "longitude": -4.0082563
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "Côte d'Ivoire"
+        },
+        "openingHoursSpecification": [
+          {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],
+            "opens": "08:00",
+            "closes": "20:00"
+          }
+        ],
+        "priceRange": "CFA",
+        "currenciesAccepted": "XOF",
+        "paymentAccepted": "Cash, Wave, Orange Money",
+        "hasMap": "https://maps.google.com/?q=Abidjan,Cote+d%27Ivoire",
+        "sameAs": [
+          "https://pharrellphone.com"
+        ],
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "telephone": "+225-07-88-71-18-96",
+          "contactType": "customer service",
+          "availableLanguage": "French",
+          "contactOption": "TollFree"
+        }
+      },
+      {
         "@type": "Organization",
         "name": "Pharrell Phone",
         "url": "https://pharrellphone.com",
         "logo": "https://pharrellphone.com/icons/Icon-512.png",
-        "description": "Boutique de smartphones et accessoires à Abidjan, Côte d'Ivoire",
-        "address": {
-          "@type": "PostalAddress",
-          "addressLocality": "Abidjan",
-          "addressCountry": "CI"
-        },
-        "contactPoint": {
-          "@type": "ContactPoint",
-          "contactType": "customer service",
-          "availableLanguage": "French"
-        }
+        "description": "Boutique de smartphones et accessoires à Abidjan, Côte d'Ivoire"
       },
       {
         "@type": "WebSite",
