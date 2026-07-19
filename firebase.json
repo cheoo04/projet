@@ -142,6 +142,13 @@
         ]
       }
     ],
+    "redirects": [
+      {
+        "source": "https://www.pharrellphone.com/**",
+        "destination": "https://pharrellphone.com/:splat",
+        "type": 301
+      }
+    ],
     "rewrites": [
       {
         "source": "/sitemap-dynamic.xml",
