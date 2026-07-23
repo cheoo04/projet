@@ -15,6 +15,10 @@ Disallow: /flutter_bootstrap.js
 Disallow: /main.dart.js
 Disallow: /demo-data
 
+# Bloquer les URLs avec query params (évite pages en double)
+Disallow: /catalog?*
+Disallow: /*?*
+
 # Autoriser ressources importantes
 Allow: /assets/
 Allow: /icons/

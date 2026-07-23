@@ -1078,13 +1078,11 @@ export const generateSitemap = functions
     }
 
     const staticUrls: SitemapUrl[] = [
-      { loc: "/",        priority: "1.0", changefreq: "daily" },
-      { loc: "/catalog", priority: "0.9", changefreq: "daily" },
-      { loc: "/catalog?category=Smartphones",  priority: "0.8", changefreq: "daily" },
-      { loc: "/catalog?category=Accessoires",  priority: "0.8", changefreq: "daily" },
-      { loc: "/catalog?category=Tablettes",    priority: "0.7", changefreq: "weekly" },
-      { loc: "/catalog?category=Audio",        priority: "0.7", changefreq: "weekly" },
-      { loc: "/chat",    priority: "0.6", changefreq: "monthly" },
+      { loc: "/",             priority: "1.0", changefreq: "daily" },
+      { loc: "/catalog",      priority: "0.9", changefreq: "daily" },
+      { loc: "/smartphones",  priority: "0.8", changefreq: "daily" },
+      { loc: "/accessoires",  priority: "0.8", changefreq: "weekly" },
+      { loc: "/chat",         priority: "0.6", changefreq: "monthly" },
     ];
 
     // Charger tous les produits en stock

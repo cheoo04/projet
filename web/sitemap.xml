@@ -11,28 +11,18 @@
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://pharrellphone.com/cart</loc>
+    <loc>https://pharrellphone.com/smartphones</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://pharrellphone.com/accessoires</loc>
     <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
+    <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://pharrellphone.com/account</loc>
+    <loc>https://pharrellphone.com/chat</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
-  </url>
-  <url>
-    <loc>https://pharrellphone.com/catalog?category=Smartphones</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://pharrellphone.com/catalog?category=Accessoires</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://pharrellphone.com/catalog?category=Promotions</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
+    <priority>0.6</priority>
   </url>
 </urlset>

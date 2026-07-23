@@ -160,6 +160,14 @@
         "destination": "/sitemap.xml"
       },
       {
+        "source": "/smartphones",
+        "destination": "/smartphones.html"
+      },
+      {
+        "source": "/accessoires",
+        "destination": "/accessoires.html"
+      },
+      {
         "source": "/robots.txt",
         "destination": "/robots.txt"
       },
